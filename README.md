@@ -4,13 +4,13 @@
 
 This repository contains code for App Chains in the following languages:
 
+* Swift
+* Objective-C
+* Java-Android
+* Java
 * Python
 * Perl
 * .NET/C#
-* Java
-* Java-Android
-* Swift
-* Objective-C
 
 
 Contents
