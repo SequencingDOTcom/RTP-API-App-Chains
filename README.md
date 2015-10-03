@@ -1,6 +1,8 @@
 # App Chains (Real-Time Personalization)
 =========================================
-[App Chains](https://sequencing.com/developer-documentation/app-sequencing-and-app-chains) provide the API code for apps that use [Sequencing.com's](https://sequencing.com/) [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp) technology. This code is opensource and free to use, share, build upon and improve.
+[App Chains](https://sequencing.com/developer-documentation/app-sequencing-and-app-chains) are the easy way to code [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp) into your app. RTP allows your app to provide app users with a genetically tailored user experience.
+
+App chain code is opensource and free to use, share, build upon and improve.
 
 This repository contains code for App Chains in the following languages:
 
@@ -8,8 +10,9 @@ This repository contains code for App Chains in the following languages:
 * Objective-C
 * Java-Android
 * Java
-* Python
+* PHP
 * Perl
+* Python
 * .NET/C#
 
 
