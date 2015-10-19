@@ -8,8 +8,7 @@ This repository contains code for App Chains in the following languages:
 
 * Swift
 * Objective-C
-* Java-Android
-* Java
+* Java / Java-Android
 * PHP
 * Perl
 * Python
@@ -38,6 +37,314 @@ The code for each App Chain is provided in various coding languages. App develop
 Configuration
 ======================================
 There are no strict configurations that have to be performed.
+
+Just drop in source files to your project and start utilizing Sequencing API!
+
+Code snippets below has following tokens that have to be substituted with real values from sequecncing.com before using the API: 
+* ```<your token>``` have to be substituted by a security token provided by Sequencing in your account page
+* ```<chain id>``` name of data processing routine
+* ```<file id>``` input data identifier
+
+## Java
+
+AppChains Java API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`public AppChains(String token, String chainsHostname)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsHostname** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
+`public Report getReport(String remoteMethodName, String applicationMethodName, String datasourceId)`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+
+Prerequisites:
+* Add Google GSON into your classpath
+
+Adding code to the project:
+* Add AppChains.java into your source folder and import (```import com.sequencing.appchains.AppChains.*```) it in your class file.
+
+After that you can start utilizing Reporting API
+
+```java
+AppChains chains = new AppChains("<your token>", "api.sequencing.com");
+Report result = chains.getReport("StartApp", "<chain id>", "<file id>");
+
+if (result.isSucceeded() == false)
+	System.out.println("Request has failed");
+else
+	System.out.println("Request has succeeded");
+		
+for (Result r : result.getResults())
+{
+	ResultType type = r.getValue().getType();
+			
+	if (type == ResultType.TEXT)
+	{
+		TextResultValue v = (TextResultValue) r.getValue();
+		System.out.println(String.format(" -> text result type %s = %s", r.getName(), v.getData()));
+	}
+			
+	if (type == ResultType.FILE)
+	{
+		FileResultValue v = (FileResultValue) r.getValue();
+		System.out.println(String.format(" -> file result type %s = %s", r.getName(), v.getUrl()));
+		v.saveTo("d:/data");
+	}
+}
+```
+
+## C# ##
+
+AppChains C# API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`public AppChains(string token, string chainsUrl, string beaconsUrl)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsUrl** - API server hostname. api.sequencing.com by default <br> **beaconsUrl** - beacons API server hostname. https://beacon.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
+`public Report GetReport(string applicationMethodName, string datasourceId)`  | Reporting API | **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+
+Prerequisites:
+* Add Newtonsoft.Json and RestSharp nuget packages into your project
+
+Adding code to the project:
+* Add SQAPI folder with all files into your project
+
+After that you can start utilizing Reporting API:
+
+```csharp
+var chains = new AppChains("<your token>", "https://api.sequencing.com/v1", "https://beacon.sequencing.com/");
+
+Report result = chains.GetReport("Chain9", "FILE:80599");
+if (result.Succeeded == false)
+    Console.WriteLine("Request has failed");
+else
+    Console.WriteLine("Request has succeeded");
+foreach (Result r in result.getResults())
+{
+    ResultType type = r.getValue().getType();
+
+    if (type == ResultType.TEXT)
+    {
+        var v = (TextResultValue) r.getValue();
+        Console.WriteLine(" -> text result type {0} = {1}", r.getName(), v.Data);
+    }
+
+    if (type == ResultType.FILE)
+    {
+        var v = (FileResultValue) r.getValue();
+        Console.WriteLine(" -> file result type {0} = {1}", r.getName(), v.Url);
+        v.saveTo("<your token>", ".\\");
+    }
+}
+```
+
+## PHP
+
+AppChains PHP API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`public function __construct($token = null, $chainsHostname = null)`  | Constructor | **token** (optional) - security token provided by sequencing.com <br> **chainsHostname** (optional) - API server hostname. api.sequencing.com by default | Use both arguments for creating chains instance in case reporting API is required
+`public function getReport($remoteMethodName, $applicationMethodName, $datasourceId)`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+
+Prerequisites:
+* PHP 5.x and higher
+
+Adding code to the project:
+* Add AppChains.php into your source folder and import (```require_once("AppChains.php");```) it in your PHP file.
+
+After that you can start utilizing Reporting API
+
+```php
+$chains = new AppChains("<your token>", "api.sequencing.com");
+$chainsResult = $chains->getReport("StartApp", "<chain id>", "<file id>");
+	
+if ($chainsResult->isSucceeded())
+	echo "Request has succeeded\n";
+else
+	echo "Request has failed\n";
+	
+foreach ($chainsResult->getResults() as $r)
+{
+	$type = $r->getValue()->getType();
+		
+	switch ($type)
+	{
+		case ResultType::TEXT:
+			$v = $r->getValue();
+			echo sprintf("-> text result type %s = %s\n", $r->getName(), $v->getData());
+		break;
+		case ResultType::FILE:
+			$v = $r->getValue();
+			echo sprintf(" -> file result type %s = %s\n", $r->getName(), $v->getUrl());
+			$v->saveTo("d:\data");
+		break;
+	}
+}
+```
+
+### Python
+
+AppChains Python API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`def __init__(self, token=None, hostname=None)`  | Constructor | **token** (optional) - security token provided by sequencing.com <br> **hostname** (optional) - API server hostname. api.sequencing.com by default | Use both arguments for creating chains instance in case reporting API is required
+`def getReport(self, remote_method_name, app_method_name, source_id)`  | Reporting API | **remote_method_name** - REST endpoint name, use "StartApp" <br> **app_method_name** - name of data processing routine <br> **source_id** - input data identifier <br>
+
+Prerequisites:
+* Python 2.7.x
+
+Adding code to the project:
+* Add AppChains.py into your source folder and import AppChains (```from AppChains import AppChains```) in your Python file.
+
+After that you can start utilizing Reporting API
+
+```python
+self.chains = AppChains('<your token>', 'api.sequencing.com')
+chains_result = self.chains.getReport('StartApp', '<chain id>', '<file id>')
+if chains_result.isSucceeded():
+    print('Request has succeeded')
+    else:
+        print('Request has failed')
+        for r in chains_result.getResults():
+            file_type = r.getValue().getType()
+            v = r.getValue()
+            if file_type == 'TEXT':
+                print('-> text result type {} = {}'.format(
+                    r.getName(), v.getData()))
+            elif file_type == 'FILE':
+                print(' -> file result type {} = {}'.format(
+                    r.getName(), v.getUrl()
+                ))
+                v.saveTo('/tmp')
+```
+
+### Perl
+
+AppChains Perl API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`sub new`  | Constructor | **1st arg** (optional) - security token provided by sequencing.com <br> **2nd arg** (optional) - API server hostname. api.sequencing.com by default | Use both arguments for creating chains instance in case reporting API is required
+`sub getReport`  | Reporting API | **1st arg** - REST endpoint name, use "StartApp" <br> **2nd arg** - name of data processing routine <br> **3rd arg** - input data identifier <br>
+
+Prerequisites:
+* Perl 5.10.x
+
+Adding code to the project:
+* Add AppChains.pm into your source folder and import AppChains in your Perl file (```use AppChains;```).
+
+Adding code to the project:
+* Add AppChains.h, AppChains.m into your source folder and import AppChains in your Objective-C source file (```#import "AppChains.h"```).
+
+After that you can start utilizing Reporting API
+
+```perl
+my $chains = AppChains->new("<your token>", "api.sequencing.com");
+my $chainsResult = $chains->getReport("StartApp", "<chain id>", "<file id>");
+
+if ($chainsResult->isSucceeded()) {
+	print "Request has succeeded\n";
+} else {
+	print "Request has failed\n";
+}
+
+foreach (@{$chainsResult->getResults()})
+{
+	my $type = $_->getValue()->getType();
+	
+	if ($type == ResultType->TEXT)
+	{
+		my $v = $_->getValue();
+		print sprintf("-> text result type %s = %s\n", $_->getName(), $v->getData());
+	}
+	elsif ($type == ResultType->FILE)
+	{
+		my $v = $_->getValue();
+		print sprintf(" -> file result type %s = %s\n", $_->getName(), $v->getUrl());
+		$v->saveTo("/tmp");
+	}
+}
+```
+
+
+### Objective-C
+
+AppChains Objective-C API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`-(instancetype)initWithToken:(NSString *)token` | Constructor | **token** - security token provided by sequencing.com | 
+`-(instancetype)initWithToken:(NSString *)token withHostName:(NSString *)hostName`  | Constructor | **token** - security token provided by sequencing.com <br> **hostName** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
+`- (void)getReportWithRemoteMethodName:(NSString *)remoteMethodName             withApplicationMethodName:(NSString *)applicationMethodName                      withDatasourceId:(NSString *)datasourceId withSuccessBlock:(void (^)(Report *result))success withFailureBlock:(void (^)(NSError *error))failure`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br> <br> **success** - callback executed on success operation<br> **failure** - callback executed on operation failure
+
+Adding code to the project:
+* Add AppChains.h, AppChains.m into your source folder and import AppChains in your Objective-C source file (```#import "AppChains.h"```).
+
+After that you can start utilizing Reporting API
+
+```objectivec
+[appChains getReportWithRemoteMethodName:@"StartApp"
+               withApplicationMethodName:@"<chain id>"
+                        withDatasourceId:@"<file id>"
+                        withSuccessBlock:^(Report *result) {
+                               NSArray *arr = [result getResults];
+                               for (Result *obj in arr) {
+                                    ResultValue *frv = [obj getValue];
+
+                                    if ([frv getType] == kResultTypeFile) {
+                                        [(FileResultValue *)frv saveToLocation:@"/tmp/"];
+                                    }
+                                }
+                            } withFailureBlock:^(NSError *error) {
+                                NSLog(@"Error occured: %@", [error description]);
+                            }];
+```
+
+### Swift
+
+AppChains Swift API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`init(token: String, chainsHostname: String)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsHostname** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
+`func getReport(remoteMethodName: String, applicationMethodName: String, datasourceId: String) -> ReturnValue<Report>`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+
+Prerequisites:
+* Swift v1 compatible compiler
+
+Adding code to the project:
+* Add AppChains.swift into your source folder.
+
+After that you can start utilizing Reporting API
+
+```swift
+let chains = AppChains(token: "<your token>", chainsHostname: "api.sequencing.com")
+
+let report:ReturnValue<Report> = chains.getReport("StartApp", applicationMethodName: "<chain id>", datasourceId: "<file id>")
+
+if let r = report.value
+{
+    for x:Result in r.results
+        
+    {
+        let type:ResultType = x.value.type;
+        switch (type)
+        {
+            case ResultType.TEXT:
+                let v:TextResultValue = x.value as TextResultValue
+                println(String(format: " -> text result type %@ = %@", x.name, v.data));
+            break;
+            case ResultType.FILE:
+                let v:FileResultValue = x.value as FileResultValue
+                println(String(format: " -> text result type %@ = %@", x.name, v.url));
+                v.saveTo("/tmp")
+            break;
+        }
+    }
+}
+else
+{
+    println("Error occured: " + report.error!)
+}
+```
 
 Troubleshooting
 ======================================
