@@ -360,7 +360,7 @@ Other tips
 
 * Ensure that the following three placeholders have been substituted with real values
  * ```<your token>```
-  * replace with the oAuth2 secret obtained from your [Sequencing.com account]https://sequencing.com/api-secret-generator. 
+  * replace with the oAuth2 secret obtained from your [Sequencing.com account](https://sequencing.com/api-secret-generator)
    * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo](https://github.com/SequencingDOTcom/oAuth2-code-and-demo)
  * ```<chain id>```
   * replace with the App Chain ID obtained from the list of [App Chains](https://sequencing.com/app-chains)
@@ -369,7 +369,7 @@ Other tips
    * The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo](https://github.com/SequencingDOTcom/File-Selector-code)
 * [Developer Documentation](https://sequencing.com/developer-documentation/)
 * [oAuth2 guide](https://sequencing.com/developer-documentation/oauth2-guide/)
-* Review the [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/), which is an open-source weather app that uses Real-Time Personalization to provide genetically tailored content.
+* Review the [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/), which is an open-source weather app that uses Real-Time Personalization to provide genetically tailored content
 * Confirm you have the latest version of the code from this repository.
 
 Maintainers
