@@ -2,7 +2,7 @@
 =========================================
 [App Chains](https://sequencing.com/developer-documentation/app-sequencing-and-app-chains) are the easy way to code [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp) into your app. RTP allows your app to provide app users with a genetically tailored user experience.
 
-The searchable list of App Chains, along with code snippets for each app chain, can be found here: [App Chains]https://sequencing.com/app-chains
+The searchable list of App Chains, along with code snippets for each app chain, can be found here: [App Chains](https://sequencing.com/app-chains/)
 
 This repository contains code for App Chains in the following languages:
 
@@ -41,13 +41,13 @@ There are no strict configurations that have to be performed.
 Just drop the source files for an app chain into your project to add Real-Time Personalization to your app.
 
 Code snippets below contain the following three placeholders. Please make sure to substitute each of the placeholders with real values:
-* ```<your token>```  substitute with the oAuth2 secret obtained from your [Sequencing.com account]https://sequencing.com/api-secret-generator. 
-** The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo]https://github.com/SequencingDOTcom/oAuth2-code-and-demo
+* ```<your token>``` substitute with the oAuth2 secret obtained from your [Sequencing.com account]https://sequencing.com/api-secret-generator. 
+ * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo]https://github.com/SequencingDOTcom/oAuth2-code-and-demo
 
 * ```<chain id>``` substitute with the App Chain ID obtained from the list of [App Chains]https://sequencing.com/app-chains
 
 * ```<file id>``` should be substituted with the file ID selected by the user while using your app. 
-** The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo]https://github.com/SequencingDOTcom/File-Selector-code
+ * The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo]https://github.com/SequencingDOTcom/File-Selector-code
 
 ## Java
 
@@ -356,14 +356,14 @@ Each app chain code should work straight out-of-the-box without any configuratio
 Other tips
 
 * Ensure that the following three placeholders have been substituted with real values
-** ```<your token>```
-*** substitute with the oAuth2 secret obtained from your [Sequencing.com account]https://sequencing.com/api-secret-generator. 
-**** The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo]https://github.com/SequencingDOTcom/oAuth2-code-and-demo
-** ```<chain id>```
-*** substitute with the App Chain ID obtained from the list of [App Chains]https://sequencing.com/app-chains
-** ```<file id>```
-*** should be substituted with the file ID selected by the user while using your app. 
-**** The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo]https://github.com/SequencingDOTcom/File-Selector-code
+ * ```<your token>```
+  * substitute with the oAuth2 secret obtained from your [Sequencing.com account]https://sequencing.com/api-secret-generator. 
+   * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo]https://github.com/SequencingDOTcom/oAuth2-code-and-demo
+ * ```<chain id>```
+  * substitute with the App Chain ID obtained from the list of [App Chains]https://sequencing.com/app-chains
+ * ```<file id>```
+  * should be substituted with the file ID selected by the user while using your app. 
+   * The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo]https://github.com/SequencingDOTcom/File-Selector-code
 * [Developer Documentation](https://sequencing.com/developer-documentation/)
 * [oAuth2 guide](https://sequencing.com/developer-documentation/oauth2-guide/)
 * Review the [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/), which is an open-source weather app that uses Real-Time Personalization to provide genetically tailored content.
