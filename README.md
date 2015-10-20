@@ -10,7 +10,7 @@ App chains consist of:
  * Your RTP-powered app differentiates itself from all other apps
 
 What types of apps can you personalize with app chains? Any type of app... even a weather app. 
-* The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) app differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
+* The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
 * Experience it yourself using one of the fun sample genetic data files that are available for all apps that use app chains.
 
 **The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: [App Chains](https://sequencing.com/app-chains/)**
