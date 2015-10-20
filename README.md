@@ -11,6 +11,7 @@
 **You don't have to know anything about the genetics or the genetic code.**
 * To use app chains and add RTP to your app, all you need to know is the software code you use everyday.
 
+
 App chains consist of:
 
 1. **API call:**
@@ -20,13 +21,16 @@ App chains consist of:
 3. **Personalzation:**
  * your app uses this information, which is obtained directly from your app user's genes in real-time, to create a truly personalized user experience
 
+
 What types of apps can you personalize with app chains? Any type of app... even a weather app. 
 * The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
 * Experience it yourself using one of the fun sample genetic data files. These sample files are available for free for all apps that use app chains.
 
+
 **The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: [App Chains](https://sequencing.com/app-chains/)**
 
 App chains are free for development use. [Register for a free Sequencing.com account](https://sequencing.com/user/register/)
+
 
 This repository contains code for App Chains in the following languages:
 
