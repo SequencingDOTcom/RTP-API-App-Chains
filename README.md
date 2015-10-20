@@ -4,7 +4,8 @@
 
 App chains consist of an API call that triggers an app hosted by Sequencing.com to perform genetic analysis on your app user's genes. The straightforward, easy-to-use results are then sent back to your app as the API response. Your app can use this information, which is obtained in real-time, to differentiate itself from all other apps by creating a truly personalized user experience.
 
-What types of apps can you personalize with app chains? Any type of app... even a weather app. The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) app differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
+What types of apps can you personalize with app chains? Any type of app... even a weather app. 
+* The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) app differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
 * Experience it yourself using one of the fun sample genetic data files that are available for all apps that use app chains.
 
 The searchable list of App Chains, along with code snippets for each app chain, can be found here: [App Chains](https://sequencing.com/app-chains/)
