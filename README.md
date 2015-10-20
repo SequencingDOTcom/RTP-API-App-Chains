@@ -2,6 +2,9 @@
 =========================================
 [App Chains](https://sequencing.com/developer-documentation/app-sequencing-and-app-chains) are the easy way to code [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp) into your app. RTP allows your app to provide app users with a genetically tailored user experience.
 
+* App chains allows your app to provide genetically tailored content. App chains are easy and were designed by coders, for coders. 
+* You don't have to know anything about the genetics or the genetic code. To use app chains and add RTP to your app, all you need to know is the software code you use everyday
+
 App chains consist of:
 
 1. **API call:**
@@ -10,7 +13,6 @@ App chains consist of:
  * the straightforward, easy-to-use results are sent to your app as the API response
 3. **Personalzation:**
  * your app uses this information, which is obtained directly from your app user's genes in real-time, to create a truly personalized user experience
- * your RTP-powered app differentiates itself from all other apps
 
 What types of apps can you personalize with app chains? Any type of app... even a weather app. 
 * The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
