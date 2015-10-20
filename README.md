@@ -10,7 +10,6 @@ App chains consist of:
  * the straightforward, easy-to-use results are sent to your app as the API response
 3. **Personalzation:**
  * your app uses this information, which is obtained directly from your app user's genes in real-time, to create a truly personalized user experience
- * your RTP-powered app differentiates itself from all other apps
 
 What types of apps can you personalize with app chains? Any type of app... even a weather app. 
 * The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
