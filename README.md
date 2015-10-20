@@ -2,13 +2,13 @@
 =========================================
 [App Chains](https://sequencing.com/developer-documentation/app-sequencing-and-app-chains) are the easy way to code [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp) into your app. RTP allows your app to provide app users with a genetically tailored user experience.
 
-* App chains allows your app to provide genetically tailored user experience.
+* **App chains allows your app to provide genetically tailored user experience.**
  * Your app can now understand and treat each app user as the unique individual they are.
 
-* App chains are designed by coders, for coders. 
+* **App chains are designed by coders, for coders.**
  * They are easy to use and quick to implement.
 
-* You don't have to know anything about the genetics or the genetic code. 
+* **You don't have to know anything about the genetics or the genetic code.**
  * To use app chains and add RTP to your app, all you need to know is the software code you use everyday.
 
 App chains consist of:
