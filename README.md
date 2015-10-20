@@ -43,7 +43,7 @@ Just drop the source files for an app chain into your project to add Real-Time P
 Code snippets below contain the following three placeholders. Please make sure to replace each of the placeholders with real values:
 * ```<your token>``` 
  * replace with the oAuth2 secret obtained from your [Sequencing.com account](https://sequencing.com/api-secret-generator)
-  * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo]https://github.com/SequencingDOTcom/oAuth2-code-and-demo
+  * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo](https://github.com/SequencingDOTcom/oAuth2-code-and-demo)
 
 * ```<chain id>``` 
  * replace with the App Chain ID obtained from the list of [App Chains](https://sequencing.com/app-chains)
