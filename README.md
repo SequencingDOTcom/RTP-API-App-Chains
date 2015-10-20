@@ -23,16 +23,6 @@ This repository contains code for App Chains in the following languages:
 * Python
 
 
-App chains consist of:
-
-1. **API call:**
- * API call that triggers an app hosted by Sequencing.com to perform genetic analysis on your app user's genes
-2. **API response:**
- * the straightforward, easy-to-use results are sent to your app as the API response
-3. **Personalzation:**
- * your app uses this information, which is obtained directly from your app user's genes in real-time, to create a truly personalized user experience
-
-
 What types of apps can you personalize with app chains? Any type of app... even a weather app. 
 * The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
 * Experience it yourself using one of the fun sample genetic data files. These sample files are available for free for all apps that use app chains.
@@ -54,7 +44,16 @@ Contents
 
 Introduction
 =========================================
-An app chain is an integration of an API call and an analysis of an app user's genes. Each app chain provides information about a specific trait, condition, disease, supplement or medication. App chains are used to provide genetically tailored content to app users so that the user experience is instantly personalized at the genetic level. This is called [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp). 
+An app chain is an integration of an API call and an analysis of an app user's genes. Each app chain provides information about a specific trait, condition, disease, supplement or medication. App chains are used to provide genetically tailored content to app users so that the user experience is instantly personalized at the genetic level. This is called [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp).
+
+Each app chain consists of:
+
+1. **API call**
+ * API call that triggers an app hosted by Sequencing.com to perform genetic analysis on your app user's genes
+2. **API response**
+ * the straightforward, easy-to-use results are sent to your app as the API response
+3. **Personalzation**
+ * your app uses this information, which is obtained directly from your app user's genes in real-time, to create a truly personalized user experience
 
 To code Real Time Personalization (RTP) technology into apps, developers may [register for a free account](https://sequencing.com/user/register/) at Sequencing.com. App development with RTP is always free.
 
