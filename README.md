@@ -8,7 +8,9 @@ What types of apps can you personalize with app chains? Any type of app... even 
 * The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) app differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
 * Experience it yourself using one of the fun sample genetic data files that are available for all apps that use app chains.
 
-The searchable list of App Chains, along with code snippets for each app chain, can be found here: [App Chains](https://sequencing.com/app-chains/)
+**The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: [App Chains](https://sequencing.com/app-chains/)**
+
+App chains are free for development use. [Register for a free Sequencing.com account](https://sequencing.com/user/register/)
 
 This repository contains code for App Chains in the following languages:
 
