@@ -2,17 +2,45 @@
 =========================================
 [App Chains](https://sequencing.com/developer-documentation/app-sequencing-and-app-chains) are the easy way to code [Real Time Personalization (RTP)](https://sequencing.com/developer-documentation/what-is-real-time-personalization-rtp) into your app. RTP allows your app to provide app users with a genetically tailored user experience.
 
-App chain code is opensource and free to use, share, build upon and improve.
+**App chains allows your app to provide genetically tailored user experience.**
+* Your app can now understand and treat each app user as the unique individual they are.
+
+**App chains are designed by coders, for coders.**
+* They are easy to use and quick to implement.
+
+**You don't have to know anything about the genetics or the genetic code.**
+* To use app chains and add RTP to your app, all you need to know is the software code you use everyday.
+
+
+App chains consist of:
+
+1. **API call:**
+ * API call that triggers an app hosted by Sequencing.com to perform genetic analysis on your app user's genes
+2. **API response:**
+ * the straightforward, easy-to-use results are sent to your app as the API response
+3. **Personalzation:**
+ * your app uses this information, which is obtained directly from your app user's genes in real-time, to create a truly personalized user experience
+
+
+What types of apps can you personalize with app chains? Any type of app... even a weather app. 
+* The open source [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/) differentiates itself from all other weather apps because it uses app chains to provide genetically tailored content to each app user. 
+* Experience it yourself using one of the fun sample genetic data files. These sample files are available for free for all apps that use app chains.
+
+
+**The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: [App Chains](https://sequencing.com/app-chains/)**
+
+App chains are free for development use. [Register for a free Sequencing.com account](https://sequencing.com/user/register/)
+
 
 This repository contains code for App Chains in the following languages:
 
+* Java / Java-Android
 * Swift
 * Objective-C
-* Java / Java-Android
+* C#/.NET
 * PHP
 * Perl
 * Python
-* .NET/C#
 
 
 Contents
@@ -38,12 +66,19 @@ Configuration
 ======================================
 There are no strict configurations that have to be performed.
 
-Just drop in source files to your project and start utilizing Sequencing API!
+Just drop the source files for an app chain into your project to add Real-Time Personalization to your app.
 
-Code snippets below has following tokens that have to be substituted with real values from sequecncing.com before using the API: 
-* ```<your token>``` have to be substituted by a security token provided by Sequencing in your account page
-* ```<chain id>``` name of data processing routine
-* ```<file id>``` input data identifier
+Code snippets below contain the following three placeholders. Please make sure to replace each of the placeholders with real values:
+* ```<your token>``` 
+ * replace with the oAuth2 secret obtained from your [Sequencing.com account](https://sequencing.com/api-secret-generator)
+  * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo](https://github.com/SequencingDOTcom/oAuth2-code-and-demo)
+
+* ```<chain id>``` 
+ * replace with the App Chain ID obtained from the list of [App Chains](https://sequencing.com/app-chains)
+
+* ```<file id>``` 
+ * replace with the file ID selected by the user while using your app
+  * The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo](https://github.com/SequencingDOTcom/File-Selector-code)
 
 ## Java
 
@@ -87,6 +122,87 @@ for (Result r : result.getResults())
 		System.out.println(String.format(" -> file result type %s = %s", r.getName(), v.getUrl()));
 		v.saveTo("d:/data");
 	}
+}
+```
+
+### Objective-C
+
+AppChains Objective-C API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`-(instancetype)initWithToken:(NSString *)token` | Constructor | **token** - security token provided by sequencing.com | 
+`-(instancetype)initWithToken:(NSString *)token withHostName:(NSString *)hostName`  | Constructor | **token** - security token provided by sequencing.com <br> **hostName** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
+`- (void)getReportWithRemoteMethodName:(NSString *)remoteMethodName             withApplicationMethodName:(NSString *)applicationMethodName                      withDatasourceId:(NSString *)datasourceId withSuccessBlock:(void (^)(Report *result))success withFailureBlock:(void (^)(NSError *error))failure`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br> <br> **success** - callback executed on success operation<br> **failure** - callback executed on operation failure
+
+Adding code to the project:
+* Add AppChains.h, AppChains.m into your source folder and import AppChains in your Objective-C source file (```#import "AppChains.h"```).
+
+After that you can start utilizing Reporting API
+
+```objectivec
+[appChains getReportWithRemoteMethodName:@"StartApp"
+               withApplicationMethodName:@"<chain id>"
+                        withDatasourceId:@"<file id>"
+                        withSuccessBlock:^(Report *result) {
+                               NSArray *arr = [result getResults];
+                               for (Result *obj in arr) {
+                                    ResultValue *frv = [obj getValue];
+
+                                    if ([frv getType] == kResultTypeFile) {
+                                        [(FileResultValue *)frv saveToLocation:@"/tmp/"];
+                                    }
+                                }
+                            } withFailureBlock:^(NSError *error) {
+                                NSLog(@"Error occured: %@", [error description]);
+                            }];
+```
+
+### Swift
+
+AppChains Swift API overview
+
+Method  | Purpose | Arguments | Description
+------------- | ------------- | ------------- | -------------
+`init(token: String, chainsHostname: String)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsHostname** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
+`func getReport(remoteMethodName: String, applicationMethodName: String, datasourceId: String) -> ReturnValue<Report>`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+
+Prerequisites:
+* Swift v1 compatible compiler
+
+Adding code to the project:
+* Add AppChains.swift into your source folder.
+
+After that you can start utilizing Reporting API
+
+```swift
+let chains = AppChains(token: "<your token>", chainsHostname: "api.sequencing.com")
+
+let report:ReturnValue<Report> = chains.getReport("StartApp", applicationMethodName: "<chain id>", datasourceId: "<file id>")
+
+if let r = report.value
+{
+    for x:Result in r.results
+        
+    {
+        let type:ResultType = x.value.type;
+        switch (type)
+        {
+            case ResultType.TEXT:
+                let v:TextResultValue = x.value as TextResultValue
+                println(String(format: " -> text result type %@ = %@", x.name, v.data));
+            break;
+            case ResultType.FILE:
+                let v:FileResultValue = x.value as FileResultValue
+                println(String(format: " -> text result type %@ = %@", x.name, v.url));
+                v.saveTo("/tmp")
+            break;
+        }
+    }
+}
+else
+{
+    println("Error occured: " + report.error!)
 }
 ```
 
@@ -264,99 +380,29 @@ foreach (@{$chainsResult->getResults()})
 }
 ```
 
-
-### Objective-C
-
-AppChains Objective-C API overview
-
-Method  | Purpose | Arguments | Description
-------------- | ------------- | ------------- | -------------
-`-(instancetype)initWithToken:(NSString *)token` | Constructor | **token** - security token provided by sequencing.com | 
-`-(instancetype)initWithToken:(NSString *)token withHostName:(NSString *)hostName`  | Constructor | **token** - security token provided by sequencing.com <br> **hostName** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
-`- (void)getReportWithRemoteMethodName:(NSString *)remoteMethodName             withApplicationMethodName:(NSString *)applicationMethodName                      withDatasourceId:(NSString *)datasourceId withSuccessBlock:(void (^)(Report *result))success withFailureBlock:(void (^)(NSError *error))failure`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br> <br> **success** - callback executed on success operation<br> **failure** - callback executed on operation failure
-
-Adding code to the project:
-* Add AppChains.h, AppChains.m into your source folder and import AppChains in your Objective-C source file (```#import "AppChains.h"```).
-
-After that you can start utilizing Reporting API
-
-```objectivec
-[appChains getReportWithRemoteMethodName:@"StartApp"
-               withApplicationMethodName:@"<chain id>"
-                        withDatasourceId:@"<file id>"
-                        withSuccessBlock:^(Report *result) {
-                               NSArray *arr = [result getResults];
-                               for (Result *obj in arr) {
-                                    ResultValue *frv = [obj getValue];
-
-                                    if ([frv getType] == kResultTypeFile) {
-                                        [(FileResultValue *)frv saveToLocation:@"/tmp/"];
-                                    }
-                                }
-                            } withFailureBlock:^(NSError *error) {
-                                NSLog(@"Error occured: %@", [error description]);
-                            }];
-```
-
-### Swift
-
-AppChains Swift API overview
-
-Method  | Purpose | Arguments | Description
-------------- | ------------- | ------------- | -------------
-`init(token: String, chainsHostname: String)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsHostname** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
-`func getReport(remoteMethodName: String, applicationMethodName: String, datasourceId: String) -> ReturnValue<Report>`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
-
-Prerequisites:
-* Swift v1 compatible compiler
-
-Adding code to the project:
-* Add AppChains.swift into your source folder.
-
-After that you can start utilizing Reporting API
-
-```swift
-let chains = AppChains(token: "<your token>", chainsHostname: "api.sequencing.com")
-
-let report:ReturnValue<Report> = chains.getReport("StartApp", applicationMethodName: "<chain id>", datasourceId: "<file id>")
-
-if let r = report.value
-{
-    for x:Result in r.results
-        
-    {
-        let type:ResultType = x.value.type;
-        switch (type)
-        {
-            case ResultType.TEXT:
-                let v:TextResultValue = x.value as TextResultValue
-                println(String(format: " -> text result type %@ = %@", x.name, v.data));
-            break;
-            case ResultType.FILE:
-                let v:FileResultValue = x.value as FileResultValue
-                println(String(format: " -> text result type %@ = %@", x.name, v.url));
-                v.saveTo("/tmp")
-            break;
-        }
-    }
-}
-else
-{
-    println("Error occured: " + report.error!)
-}
-```
-
 Troubleshooting
 ======================================
 Each app chain code should work straight out-of-the-box without any configuration requirements or issues. 
 
 Other tips
 
-* To code Real-Time Personalization technology into your app, first [register for a free account](https://sequencing.com/user/register/) and use your account credentials when running the demo. You may then access all developer tools and information directly from the [Developer Center](https://sequencing.com/developer-center/).
-* [Developer Documentation](https://sequencing.com/developer-documentation/) is also available.
-* Review the [oAuth2](https://sequencing.com/developer-documentation/oauth2-guide) requirements.
-* Review [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App), which is an weather app that uses Real-Time Personalization to provide genetically tailored content.
-* Confirm you are connected to the internet since the API calls will be made to our server.
+* Ensure that the following three placeholders have been substituted with real values:
+
+1. ```<your token>```
+  * replace with the oAuth2 secret obtained from your [Sequencing.com account](https://sequencing.com/api-secret-generator)
+   * The code snippet for enabling Sequencing.com's oAuth2 authentication for your app can be found in the [oAuth2 code and demo repo](https://github.com/SequencingDOTcom/oAuth2-code-and-demo)
+2. ```<chain id>```
+  * replace with the App Chain ID obtained from the list of [App Chains](https://sequencing.com/app-chains)
+3. ```<file id>```
+  * replace with the file ID selected by the user while using your app. 
+   * The code snippet for enabling Sequencing.com's File Selector for your app can be found in the [File Selector code repo](https://github.com/SequencingDOTcom/File-Selector-code)
+   
+* [Developer Documentation](https://sequencing.com/developer-documentation/)
+
+* [oAuth2 guide](https://sequencing.com/developer-documentation/oauth2-guide/)
+
+* Review the [Weather My Way +RTP app](https://github.com/SequencingDOTcom/Weather-My-Way-RTP-App/), which is an open-source weather app that uses Real-Time Personalization to provide genetically tailored content
+
 * Confirm you have the latest version of the code from this repository.
 
 Maintainers
