@@ -12,6 +12,17 @@
 * To use app chains and add RTP to your app, all you need to know is the software code you use everyday.
 
 
+This repository contains code for App Chains in the following languages:
+
+* Java / Java-Android
+* Swift
+* Objective-C
+* C#/.NET
+* PHP
+* Perl
+* Python
+
+
 App chains consist of:
 
 1. **API call:**
@@ -30,17 +41,6 @@ What types of apps can you personalize with app chains? Any type of app... even 
 **The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: [App Chains](https://sequencing.com/app-chains/)**
 
 App chains are free for development use. [Register for a free Sequencing.com account](https://sequencing.com/user/register/)
-
-
-This repository contains code for App Chains in the following languages:
-
-* Java / Java-Android
-* Swift
-* Objective-C
-* C#/.NET
-* PHP
-* Perl
-* Python
 
 
 Contents
