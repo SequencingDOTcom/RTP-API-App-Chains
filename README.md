@@ -358,7 +358,7 @@ Each app chain code should work straight out-of-the-box without any configuratio
 
 Other tips
 
-* Ensure that the following three placeholders have been substituted with real values
+* Ensure that the following three placeholders have been substituted with real values:
 
 1. ```<your token>```
   * replace with the oAuth2 secret obtained from your [Sequencing.com account](https://sequencing.com/api-secret-generator)
