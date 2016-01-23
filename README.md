@@ -11,7 +11,7 @@
 **You don't have to know anything about the genetics or the genetic code.**
 * To use app chains and add RTP to your app, all you need to know is the software code you use everyday.
 
-**The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: https://sequencing.com/app-chains/**
+**The searchable list of all App Chains, along with additional info and code snippets for each chain, can be accessed here -> https://sequencing.com/app-chains/**
 
 While there are already app chains to personalize most apps, if you need something but don't see an app chain for it, tell us! (ie email us: gittaca@sequencing.com).
 
