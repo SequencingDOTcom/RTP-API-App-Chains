@@ -11,17 +11,20 @@
 **You don't have to know anything about the genetics or the genetic code.**
 * To use app chains and add RTP to your app, all you need to know is the software code you use everyday.
 
-**The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: [App Chains](https://sequencing.com/app-chains/)**
+**The searchable list of all App Chains, along with additional info and code snippets for each app chain, can be accessed here: https://sequencing.com/app-chains/**
+
+While there are already app chains to personalize most apps, if you need something but don't see an app chain for it, tell us! (ie email us: gittaca@sequencing.com).
 
 This repo contains code for App Chains in the following languages:
 
-* Java / Java-Android
 * Swift
 * Objective-C
-* C#/.NET
+* Java - Android
+* Java
 * PHP
 * Perl
 * Python
+* C#/.NET
 
 App chains are free for development use. [Register for a free Sequencing.com account](https://sequencing.com/user/register/)
 
