@@ -26,6 +26,13 @@ This repo contains code for App Chains in the following languages:
 * Python
 * C#/.NET
 
+Plugins for implementing Sequencing.com's Real-Time Personalization (+RTP) API:
+
+* [CocoPod (iOS Swift)](https://github.com/SequencingDOTcom/CocoaPod-iOS-Master-Plugin-Swift)
+* [CocoPod (iOS Objective-C)](https://github.com/SequencingDOTcom/CocoaPod-iOS-Master-Plugin-ObjectiveC)
+* [Maven (Android Java)](https://github.com/SequencingDOTcom/Maven-Android-Master-Plugin-Java)
+* [Nuget (Windows C#/.NET)](https://sequencing.com/developer-documentation/nuget-visual-studio)
+
 App chains are free for development use. [Register for a free Sequencing.com account](https://sequencing.com/user/register/)
 
 
