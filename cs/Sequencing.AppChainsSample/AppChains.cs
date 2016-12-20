@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Sequencing.AppChainsSample.SQAPI;
 
@@ -58,11 +59,37 @@ namespace Sequencing.AppChainsSample
         /// <returns></returns>
         public Report GetReport(string applicationMethodName, string datasourceId)
         {
-            var _startApp = backendFacade.StartApp(new AppStartParams{AppCode = applicationMethodName, 
-                                                                      Pars = {new NewJobParameter("dataSourceId", datasourceId)}});
-            return GetReportImpl(new Job(_startApp));
+            var _startApp = backendFacade.StartApp(new AppStartParams
+            {
+                AppCode = applicationMethodName,
+                Pars = { new NewJobParameter("dataSourceId", datasourceId) }
+            });
+            return GetReportImpl(_startApp);
         }
-  
+
+        public Dictionary<string, List<Report>> GetReportBatch(Dictionary<string, string> appChainsParams)
+        {
+            List<AppStartParams> paramsList = new List<AppStartParams>(appChainsParams.Count);
+
+            foreach (var appParameter in appChainsParams)
+                paramsList.Add(new AppStartParams
+                {
+                    AppCode = appParameter.Key,
+                    Pars = { new NewJobParameter("dataSourceId", appParameter.Value) }
+                });
+            var startAppBatch = backendFacade.StartAppBatch(new BatchAppStartParams() { Pars = paramsList });
+
+            Dictionary<string, List<Report>> reportAppResults = new Dictionary<string, List<Report>>(startAppBatch.Count);
+            foreach (var appResult in startAppBatch)
+            {
+                if (!reportAppResults.ContainsKey(appResult.Key))
+                    reportAppResults[appResult.Key] = new List<Report>();
+
+                reportAppResults[appResult.Key].Add(GetReportImpl(appResult.Value));
+            }                
+            return reportAppResults;
+        }
+
         /// <summary>
         /// Returns sequencing beacon
         /// </summary>
@@ -99,19 +126,22 @@ namespace Sequencing.AppChainsSample
         /// <returns></returns>
         public AppResultsHolder GetRawReport(string applicationMethodName, string datasourceId)
         {
-            var _startApp = backendFacade.StartApp(new AppStartParams{AppCode = applicationMethodName, 
-                                                                      Pars = {new NewJobParameter("dataSourceId", datasourceId)}});
-            return GetRawReportImpl(new Job(_startApp));
+            var _startApp = backendFacade.StartApp(new AppStartParams
+            {
+                AppCode = applicationMethodName,
+                Pars = { new NewJobParameter("dataSourceId", datasourceId) }
+            });
+            return GetRawReportImpl(_startApp);
         }
-       
+
         /// <summary>
         /// Retrieves report data from the API server
         /// </summary>
         /// <param name="job">identifier to retrieve report</param>
         /// <returns></returns>
-        protected Report GetReportImpl(Job job)
+        protected Report GetReportImpl(AppResultsHolder resultHolder)
         {
-            return processCompletedJob(GetRawReportImpl(job));
+            return ProcessCompletedJob(GetRawReportImpl(resultHolder));
         }
 
         /// <summary>
@@ -119,34 +149,35 @@ namespace Sequencing.AppChainsSample
         /// </summary>
         /// <param name="job">job id</param>
         /// <returns></returns>
-        protected AppResultsHolder GetRawReportImpl(Job job)
+        protected AppResultsHolder GetRawReportImpl(AppResultsHolder appResult)
         {
             while (true)
             {
                 try
                 {
-                    var rawResult = backendFacade.GetAppResults(job.JobId);
-                    if (rawResult.Status.Status == "Completed")
-                        return rawResult;
+                    if (appResult.Status.Status == "Completed")
+                        return appResult;
 
                     Task.Delay(DEFAULT_REPORT_RETRY_TIMEOUT).Wait();
+
+                    appResult = backendFacade.GetAppResults(appResult.Status.IdJob);
                 }
                 catch (Exception e)
                 {
-                    throw new ApplicationException("Error processing job:"+ job.JobId, e);
+                    throw new ApplicationException("Error processing job:" + appResult.Status.IdJob, e);
                 }
             }
         }
 
-        
+
         /// <summary>
         /// Handles raw report result by transforming it to user friendly state
-	    /// </summary>
+        /// </summary>
         /// <param name="rawResult"></param>
         /// <returns></returns>
-        protected Report processCompletedJob(AppResultsHolder rawResult)
+        protected Report ProcessCompletedJob(AppResultsHolder rawResult)
         {
-            var results=new List<Result>();
+            var results = new List<Result>();
             foreach (var prop in rawResult.ResultProps)
             {
                 string resultPropType = prop.Type.ToLower();

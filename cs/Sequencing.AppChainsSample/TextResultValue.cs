@@ -3,7 +3,7 @@ namespace Sequencing.AppChainsSample
     /// <summary>
     /// Class that represents result entity if plain text string
     /// </summary>
-    class TextResultValue : ResultValue
+    public class TextResultValue : ResultValue
     {
         private string data;
 

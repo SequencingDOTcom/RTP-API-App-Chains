@@ -54,6 +54,7 @@
     <Compile Include="SQAPI\AppStatus.cs" />
     <Compile Include="SQAPI\BackendServiceFacade.cs" />
     <Compile Include="FileResultValue.cs" />
+    <Compile Include="SQAPI\BatchAppStartParams.cs" />
     <Compile Include="SQAPI\BeaconFacade.cs" />
     <Compile Include="SQAPI\ItemDataValue.cs" />
     <Compile Include="Job.cs" />

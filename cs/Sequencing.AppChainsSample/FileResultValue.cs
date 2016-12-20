@@ -8,7 +8,7 @@ namespace Sequencing.AppChainsSample
     /// <summary>
     ///  Class that represents result entity if it's file	
     /// </summary>
-    internal class FileResultValue : ResultValue
+    public class FileResultValue : ResultValue
     {
         private readonly string name;
         private readonly string extension;

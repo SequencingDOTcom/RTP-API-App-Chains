@@ -1,7 +1,10 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RestSharp;
 
 namespace Sequencing.AppChainsSample.SQAPI
@@ -38,7 +41,26 @@ namespace Sequencing.AppChainsSample.SQAPI
                     Thread.Sleep(RETRY_TIMEOUT);
                     continue;
                 }
+           
                 return JsonConvert.DeserializeObject<T>(_execute.Content);
+            }
+            throw new Exception("Unable to call service, last response was:");
+        }
+
+        private Dictionary<string, AppResultsHolder> ExecuteRqExtended(RestRequest rq)
+        {
+            var _cl = CreateClient();
+            for (int _idx = 0; _idx < ATTEMPTS_COUNT; _idx++)
+            {
+                var _execute = _cl.Execute(rq);
+                if (_execute.StatusCode != HttpStatusCode.OK)
+                {
+                    Thread.Sleep(RETRY_TIMEOUT);
+                    continue;
+                }
+                return JArray.Parse(_execute.Content)
+                    .Select(x => x.ToObject<KeyValuePair<string, AppResultsHolder>>())
+                    .ToDictionary(x => x.Key, x => x.Value);
             }
             throw new Exception("Unable to call service, last response was:");
         }
@@ -67,23 +89,34 @@ namespace Sequencing.AppChainsSample.SQAPI
             _restRequest.AddParameter("idJob", idJob, ParameterType.QueryString);
             return ExecuteRq<AppResultsHolder>(_restRequest);
         }
-        
+
         /// <summary>
         /// Starts app chain execution
         /// </summary>
         /// <param name="pars">app parameters</param>
         /// <returns>appchain job id</returns>
-        public long StartApp(AppStartParams pars)
+        public AppResultsHolder StartApp(AppStartParams pars)
         {
             var _restRequest = CreateRq("StartApp", Method.POST);
             _restRequest.AddParameter(new Parameter
-                                      {
-                                          Name = "application/json",
-                                          Value = JsonConvert.SerializeObject(pars),
-                                          Type = ParameterType.RequestBody
-                                      });
-            var _startAppRs = ExecuteRq<StartAppRs>(_restRequest);
-            return _startAppRs.jobId;
+            {
+                Name = "application/json",
+                Value = JsonConvert.SerializeObject(pars),
+                Type = ParameterType.RequestBody
+            });
+            return ExecuteRq<AppResultsHolder>(_restRequest);
+        }
+
+        public Dictionary<string, AppResultsHolder> StartAppBatch(BatchAppStartParams pars)
+        {
+            var restRequest = CreateRq("StartAppBatch", Method.POST);
+            restRequest.AddParameter(new Parameter
+            {
+                Name = "application/json",
+                Value = JsonConvert.SerializeObject(pars),
+                Type = ParameterType.RequestBody
+            });
+            return ExecuteRqExtended(restRequest);
         }
 
         private IRestResponse ExecuteRestRq(RestRequest rq)
