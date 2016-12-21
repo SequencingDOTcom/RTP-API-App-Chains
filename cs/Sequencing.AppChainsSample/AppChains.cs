@@ -67,7 +67,7 @@ namespace Sequencing.AppChainsSample
             return GetReportImpl(_startApp);
         }
 
-        public Dictionary<string, List<Report>> GetReportBatch(Dictionary<string, string> appChainsParams)
+        public Dictionary<string, Report> GetReportBatch(Dictionary<string, string> appChainsParams)
         {
             List<AppStartParams> paramsList = new List<AppStartParams>(appChainsParams.Count);
 
@@ -79,13 +79,11 @@ namespace Sequencing.AppChainsSample
                 });
             var startAppBatch = backendFacade.StartAppBatch(new BatchAppStartParams() { Pars = paramsList });
 
-            Dictionary<string, List<Report>> reportAppResults = new Dictionary<string, List<Report>>(startAppBatch.Count);
+            Dictionary<string, Report> reportAppResults = new Dictionary<string, Report>(startAppBatch.Count);
             foreach (var appResult in startAppBatch)
             {
-                if (!reportAppResults.ContainsKey(appResult.Key))
-                    reportAppResults[appResult.Key] = new List<Report>();
-
-                reportAppResults[appResult.Key].Add(GetReportImpl(appResult.Value));
+                
+                reportAppResults[appResult.Key] = GetReportImpl(appResult.Value);
             }                
             return reportAppResults;
         }
