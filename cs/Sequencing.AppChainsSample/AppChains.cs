@@ -81,10 +81,8 @@ namespace Sequencing.AppChainsSample
 
             Dictionary<string, Report> reportAppResults = new Dictionary<string, Report>(startAppBatch.Count);
             foreach (var appResult in startAppBatch)
-            {
-                
-                reportAppResults[appResult.Key] = GetReportImpl(appResult.Value);
-            }                
+                reportAppResults[appResult.Key] = GetReportImpl(appResult.Value);       
+
             return reportAppResults;
         }
 
