@@ -169,7 +169,7 @@ class AppChains(object):
     #: Timeout to wait between tries to update Job status in seconds
     DEFAULT_REPORT_RETRY_TIMEOUT = 1
     #: Default AppChains protocol version
-    PROTOCOL_VERSION = 'v1'
+    PROTOCOL_VERSION = 'v2'
 
     #: Security token supplied by the client
     token = None
@@ -189,23 +189,45 @@ class AppChains(object):
     #: High level public API
     def getReport(self, remote_method_name, app_method_name, source_id):
         """Requests report
-        :param remote_method_name: REST endpoint name (i.e. StartApp)
+        :param remote_method_name: REST endpoint name (i.e. v2/StartApp)
         :param app_method_name: report/application specific identifier
         (i.e. MelanomaDsAppv)
         :param source_id: resource with data to use for report generation
         """
-        job = self.submitReportJob(
+        raw_result = self.getRawJobResult(self.submitReportJob(
             remote_method_name, app_method_name, source_id
-        )
-        return self.getReportImpl(job)
+        ))
+        return self.getReportImpl(raw_result)
 
     def getReportEx(self, remote_method_name, request_body):
         """Requests report
         :param remote_method_name: REST endpoint name (i.e. StartApp)
         :param request_body: jsonified request body to send to server
         """
-        job = self.submitReportJobImpl(remote_method_name, request_body)
-        return self.getReportImpl(job)
+        raw_result = self.getRawJobResult(self.submitReportJobImpl(remote_method_name, request_body))
+        return self.getReportImpl(raw_result)
+
+    def getReportBatch(self, remote_method_name, app_chain_param):
+        """Requests report
+        :param remote_method_name remote_method_name: REST endpoint name (i.e. v2/StartAppBatch)
+        :param appChainParam map of key app_method_name: report/application specific identifier
+        (i.e. MelanomaDsAppv) value source_id: resource with data to use for report generation
+        :return report_map of key app_method_name, value Report instance
+        """
+        request_params = []
+        for application_method_name in app_chain_param:
+            request_params.append(
+                self.buildReportRequestBody(application_method_name, app_chain_param[application_method_name]))
+        request_body = json.dumps({'Pars': request_params})
+        decoded_response = self.submitReportJobImpl(remote_method_name, request_body)
+        report_map = {}
+        for decoded_response_item in decoded_response:
+            report_map[decoded_response_item.get("Key")] = \
+                self.getReportImpl(self.getRawJobResult(decoded_response_item.get("Value")))
+        return report_map
+
+    def getBatchReport(self, remote_method_name, request_params):
+        self.getReportImpl(remote_method_name, request_params)
 
     def getSequencingBeacon(self, chrom, pos, allele):
         """Returns sequencing beacon"""
@@ -228,9 +250,9 @@ class AppChains(object):
         (i.e. MelanomaDsAppv)
         :param source_id: resource with data to use for report generation
         """
-        job = self.submitReportJob(
-            remote_method_name, app_method_name, source_id)
-        return self.getRawReportImpl(job).getSource()
+        raw_result = self.getRawJobResult(self.submitReportJob(
+            remote_method_name, app_method_name, source_id))
+        return self.getRawReportImpl(raw_result).getSource()
 
     def getRawReportEx(self, remote_method_name, request_body):
         """Requests report in raw form it is sent from the server
@@ -238,8 +260,8 @@ class AppChains(object):
         :param remote_method_name: REST endpoint name (i.e. StartApp)
         :param request_body: jsonified request body to send to server
         """
-        job = self.submitReportJobImpl(remote_method_name, request_body)
-        return self.getRawReportImpl(job).getSource()
+        raw_result = self.getRawJobResult(self.submitReportJobImpl(remote_method_name, request_body))
+        return self.getRawReportImpl(raw_result).getSource()
 
     def getBeacon(self, method_name, parameters):
         """Returns beacon
@@ -263,23 +285,23 @@ class AppChains(object):
     def getBeaconParameters(self, chrom, pos, allele):
         return {'chrom': chrom, 'pos': pos, 'allele': allele}
 
-    def getReportImpl(self, job):
+    def getReportImpl(self, raw_result):
         """Retrieves report data from the API server
         :param job: identifier to retrieve report
         :return: report
         """
-        return self.processCompletedJob(self.getRawReportImpl(job))
+        return self.processCompletedJob(self.getRawReportImpl(raw_result))
 
-    def getRawReportImpl(self, job):
+    def getRawReportImpl(self, raw_result):
         """Retrieves report data from the API server
         :param job: identifier to retrieve report
         :return: report
         """
         while True:
-            raw_result = self.getRawJobResult(job)
             if raw_result.isCompleted():
                 return raw_result
             time.sleep(self.DEFAULT_REPORT_RETRY_TIMEOUT)
+            raw_result = self.getRawJobResult(self.getJobResponce(raw_result.getJobId()))
 
     def processCompletedJob(self, raw_result):
         """Handles raw report result by transforming it to user friendly state"""
@@ -288,8 +310,8 @@ class AppChains(object):
             types = result_prop.get('Type')
             result_prop_value = result_prop.get('Value')
             result_prop_name = result_prop.get('Name')
-            if not types or not result_prop_value or not result_prop_name:
-                continue
+            #if not types or not result_prop_value or not result_prop_name:
+            #    continue
             result_prop_type = types.lower()
             if result_prop_type == 'plaintext':
                 results.append(
@@ -309,30 +331,7 @@ class AppChains(object):
         final_result.setResults(results)
         return final_result
 
-    def getRawJobResult(self, job):
-        """Retrieves raw job results data
-        :param job: job identifier
-        :return: job results
-        """
-        url = self.getJobResultsUrl(job.getJobId())
-        http_response = self.httpRequest(url)
-        decoded_response = json.loads(http_response.getResponseData())
-        result_props = decoded_response.get('ResultProps')
-        status = decoded_response.get('Status')
 
-        succeeded = False
-        if status.get('CompletedSuccesfully'):
-            succeeded = bool(status.get('CompletedSuccesfully'))
-        job_status = status.get('Status')
-        result = RawReportJobResult()
-        result.setSource(decoded_response)
-        result.setJobId(job.getJobId())
-        result.setSucceeded(succeeded)
-        result.setCompleted(
-            job_status.lower() == 'completed' or job_status.lower() == 'failed')
-        result.setResultProps(result_props)
-        result.setStatus(job_status)
-        return result
 
     def buildReportRequestBody(self, application_method_name, datasource_id):
         """Builds request body used for report generation
@@ -357,6 +356,16 @@ class AppChains(object):
                 application_method_name, datasource_id))
         )
 
+    def getJobResponce(self, job_id):
+        """Submits job to the API server
+        :param job: job identifier
+        :return: job responce
+        """
+        url = self.getJobResultsUrl(job_id)
+        http_response = self.httpRequest(url)
+        response_code = http_response.getResponseCode()
+        return json.loads(http_response.getResponseData())
+
     def submitReportJobImpl(self, remote_method_name, request_body):
         """Submits job to the API server
         :param remote_method_name: REST endpoint name (i.e. StartApp)
@@ -372,7 +381,30 @@ class AppChains(object):
             raise ReportException(
                 'Appchains returned error HTTP code {} with message {}'.format(
                     response_code, response_data))
-        return Job(response_data.get('jobId'))
+        return response_data
+
+    def getRawJobResult(self, decoded_response):
+        """Retrieves raw job results data
+        :param job: job identifier
+        :return: job results
+        """
+        result_props = decoded_response.get('ResultProps')
+        status = decoded_response.get('Status')
+
+        succeeded = False
+        if status.get('CompletedSuccesfully'):
+            succeeded = bool(status.get('CompletedSuccesfully'))
+        job_status = status.get('Status')
+        job_id = status.get("IdJob")
+        result = RawReportJobResult()
+        result.setSource(decoded_response)
+        result.setJobId(job_id)
+        result.setSucceeded(succeeded)
+        result.setCompleted(
+            job_status.lower() == 'completed' or job_status.lower() == 'failed')
+        result.setResultProps(result_props)
+        result.setStatus(job_status)
+        return result
 
     def getReportFileUrl(self, file_id):
         """Constructs URL for getting report file
