@@ -1,19 +1,15 @@
 package com.sequencing.appchains;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.nio.file.StandardCopyOption;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 
 import com.google.gson.GsonBuilder;
@@ -54,7 +50,7 @@ public class AppChains
 	/**
 	 * Default AppChains protocol version
 	 */
-	private final static String PROTOCOL_VERSION = "v1";
+	private final static String PROTOCOL_VERSION = "v2";
 
 	/**
 	 * Constructor that should be called in order to work
@@ -89,8 +85,7 @@ public class AppChains
 	 */
 	public Report getReport(String remoteMethodName, String applicationMethodName, String datasourceId)
 	{
-		Job job = submitReportJob("POST", remoteMethodName, applicationMethodName, datasourceId);
-		return getReportImpl(job);
+		return getReportImpl("POST", remoteMethodName, toJson(buildReportRequestBody(applicationMethodName, datasourceId)));
 	}
 	
 	/**
@@ -101,10 +96,27 @@ public class AppChains
 	 */
 	public Report getReport(String remoteMethodName, String requestBody)
 	{
-		Job job = submitReportJob("POST", remoteMethodName, requestBody);
-		return getReportImpl(job);
+		return getReportImpl("POST", remoteMethodName, requestBody);
 	}
-	
+
+	public Map<String, Report> getReportBatch(String remoteMethodName, Map<String, String> appChainsParams)
+	{
+		List<Map<String, Object>> paramsList = new ArrayList<Map<String, Object>>();
+
+		for (Map.Entry<String, String> appParameter : appChainsParams.entrySet()) {
+			paramsList.add(buildReportRequestBody(appParameter.getKey(), appParameter.getValue()));
+		}
+
+		HttpResponse httpResponse = httpRequest("POST", getJobSubmissionUrl(remoteMethodName),  "{\"Pars\":" + toJson(paramsList) + "}");
+		List<Map<String, Object>> decodedResponse = (List<Map<String, Object>>) fromJson(httpResponse.responseData);
+		Map<String, Report> reportMap = new HashMap<String, Report>();
+
+		for (Map<String, Object> decodedJob :decodedResponse) {
+			RawReportJobResult rawResult = getRawJobResult((Map<String, Object>) decodedJob.get("Value"));
+			reportMap.put((String) decodedJob.get("Key"), getReportImpl(rawResult));
+		}
+		return reportMap;
+	}
 	/**
 	 * Returns sequencing beacon
 	 * @return
@@ -135,8 +147,7 @@ public class AppChains
 	 */
 	public Map<String, Object> getRawReport(String remoteMethodName, String applicationMethodName, String datasourceId)
 	{
-		Job job = submitReportJob("POST", remoteMethodName, applicationMethodName, datasourceId);
-		return getRawReportImpl(job).getSource();
+		return getRawReportImpl("POST", remoteMethodName, toJson(buildReportRequestBody(applicationMethodName, datasourceId))).getSource();
 	}
 	
 	/**
@@ -148,8 +159,7 @@ public class AppChains
 	 */
 	public Map<String, Object> getRawReport(String remoteMethodName, String requestBody)
 	{
-		Job job = submitReportJob("POST", remoteMethodName, requestBody);
-		return getRawReportImpl(job).getSource();
+		return getRawReportImpl("POST", remoteMethodName, requestBody).getSource();
 	}
 	
 	/**
@@ -166,7 +176,7 @@ public class AppChains
 	/**
 	 * Returns beacon
 	 * @param methodName REST endpoint name (i.e. PublicBeacons)
-	 * @param parameters query string
+	 * @param queryString query string
 	 * @return
 	 */
 	public String getBeacon(String methodName, String queryString)
@@ -211,9 +221,9 @@ public class AppChains
 	 * @param data string with json data
 	 * @return 
 	 */
-	protected Map<String, Object> fromJson(String data)
+	protected Object fromJson(String data)
 	{
-		return new GsonBuilder().create().fromJson(data, new TypeToken<Map<String, Object>>(){}.getType());
+		return new GsonBuilder().create().fromJson(data, new TypeToken<Object>(){}.getType());
 	}
 	
 	/**
@@ -248,41 +258,68 @@ public class AppChains
 	
 	/**
 	 * Retrieves report data from the API server
-	 * @param job identifier to retrieve report
+	 * @param  rawResult RawReportJobResult
 	 * @return report
 	 */
-	protected Report getReportImpl(Job job)
+	protected Report getReportImpl(RawReportJobResult rawResult)
 	{
-		return processCompletedJob(getRawReportImpl(job));
+		return processCompletedJob(getRawReportImpl(rawResult));
 	}
-	
+	/**
+	 * Retrieves report data from the API server
+	 * @param httpMethod httpMethod HTTP method to access API server
+	 * @param remoteMethodName REST endpoint name (i.e. StartApp)
+	 * @param requestBody jsonified request body to send to server
+	 * @return report
+	 */
+	protected Report getReportImpl(String httpMethod, String remoteMethodName, String requestBody)
+	{
+		return processCompletedJob(getRawReportImpl(httpMethod, remoteMethodName, requestBody));
+	}
+
+	/**
+	 * Retrieves report data from the API server
+	 * @param httpMethod httpMethod HTTP method to access API server
+	 * @param remoteMethodName REST endpoint name (i.e. StartApp)
+	 * @param requestBody jsonified request body to send to server
+	 * @return report
+	 */
+	protected RawReportJobResult getRawReportImpl(String httpMethod, String remoteMethodName, String requestBody)
+	{
+		HttpResponse httpResponse = httpRequest(httpMethod, getJobSubmissionUrl(remoteMethodName), requestBody);
+		Map<String, Object> decodedResponse = (Map<String, Object>) fromJson(httpResponse.responseData);
+		RawReportJobResult rawReportJobResult = getRawJobResult(decodedResponse);
+		return getRawReportImpl(rawReportJobResult);
+	}
+
 	/**
 	 * Retrieves raw report data from the API server
-	 * @param job identifier to retrieve report
+	 * @param rawResult RawReportJobResult
 	 * @return report
 	 */
-	protected RawReportJobResult getRawReportImpl(Job job)
+	protected RawReportJobResult getRawReportImpl(RawReportJobResult rawResult)
 	{
 		while (true)
 		{
 			try
 			{
-				RawReportJobResult rawResult = getRawJobResult(job);
 				if (rawResult.isCompleted())
 				{
 					return rawResult;
 				}
 				
 				TimeUnit.SECONDS.sleep(DEFAULT_REPORT_RETRY_TIMEOUT);
+
+				rawResult = getRawJobResult(rawResult.getJobId());
 			}
 			catch (Exception e)
 			{
 				throw new RuntimeException(String.format(
-						"Error processing job %d: %s", job.getJobId(), e.getMessage()) , e);
+						"Error processing job: %s", rawResult.getJobId(), e.getMessage()) , e);
 			}
 		}
 	}
-	
+
 	/**
 	 * Handles raw report result by transforming it to user friendly state
 	 * @param rawResult
@@ -297,13 +334,15 @@ public class AppChains
 			Object type = resultProp.get("Type"),
 				   value = resultProp.get("Value"),
 				   name = resultProp.get("Name");
-			
-			if (type == null || value == null || name == null)
-				continue;
-			
+
+			/*if (type == null || value == null || name == null)
+				continue;*/
+
 			String resultPropType = type.toString().toLowerCase(),
-				   resultPropValue = value.toString(),
-				   resultPropName = name.toString();
+				   resultPropValue = (String) value,
+				   resultPropName = (String) name;
+
+
 			
 			if (resultPropType.equals("plaintext"))
 			{
@@ -325,35 +364,49 @@ public class AppChains
 		
 		return finalResult;
 	}
-	
+
+
 	/**
 	 * Retrieves raw job results data
-	 * @param job job identifier
+	 * @param jobId job id
+	 * @return raw job results
+	 */
+	protected RawReportJobResult getRawJobResult(int jobId)
+	{
+		URL url = getJobResultsUrl(jobId);
+		HttpResponse httpResponse = httpRequest("GET", url, "");
+		Map<String, Object> decodedResponse = (Map<String, Object>) fromJson(httpResponse.responseData);
+
+		return getRawJobResult(decodedResponse);
+	}
+	/**
+	 * Retrieves raw job results data
+	 * @param decodedResponse decoded response
 	 * @return raw job results
 	 */
 	@SuppressWarnings("unchecked")
-	protected RawReportJobResult getRawJobResult(Job job)
+	protected RawReportJobResult getRawJobResult(Map<String, Object> decodedResponse)
 	{
-		URL url = getJobResultsUrl(job.jobId);
-		
-		HttpResponse httpResponse = httpRequest("GET", url, "");
-		Map<String, Object> decodedResponse = fromJson(httpResponse.responseData);
-		
 		List<Map<String, Object>> resultProps = (List<Map<String, Object>>) decodedResponse.get("ResultProps");
 		Map<String, Object> status = (Map<String, Object>) decodedResponse.get("Status");
-		
+
 		boolean succeeded;
-		
+
 		if (status.get("CompletedSuccesfully") == null)
 			succeeded = false;
 		else
 			succeeded = (Boolean) status.get("CompletedSuccesfully");
-		
 		String jobStatus = status.get("Status").toString();
-		
+		int jobId;
+		try {
+			jobId = Float.valueOf(status.get("IdJob").toString()).intValue();
+		} catch (Exception e) {
+			throw new RuntimeException("Appchains returned invalid job identifier");
+		}
+
 		RawReportJobResult result = new RawReportJobResult();
 		result.setSource(decodedResponse);
-		result.setJobId(job.getJobId());
+		result.setJobId(jobId);
 		result.setSucceeded(succeeded);
 		result.setCompleted(jobStatus.equalsIgnoreCase("completed") || jobStatus.equalsIgnoreCase("failed"));
 		result.setResultProps(resultProps);
@@ -390,7 +443,7 @@ public class AppChains
 			throw new RuntimeException(String.format("Appchains returned error HTTP code %d with message %s",
 					httpResponse.getResponseCode(), httpResponse.getResponseData()));
 		
-		Map<String, Object> parsedResponse = fromJson(httpResponse.getResponseData());
+		Map<String, Object> parsedResponse = (Map<String, Object>) fromJson(httpResponse.getResponseData());
 		Integer jobId = null;
 		
 		try {
@@ -410,7 +463,7 @@ public class AppChains
 	 */
 	protected URL getReportFileUrl(Integer fileId)
 	{
-		return getBaseAppChainsUrl(String.format("GetReportFile?id=%d", fileId)); 
+		return getBaseAppChainsUrl(String.format("/GetReportFile?id=%d", fileId));
 	}
 
 	/**
@@ -419,13 +472,16 @@ public class AppChains
 	 * @return URL
 	 */
 	protected URL getJobResultsUrl(Integer jobId)
-		{
-		return getBaseAppChainsUrl(String.format("GetAppResults?idJob=%d", jobId)); 
+	{
+		return getBaseAppChainsUrl(String.format("/GetAppResults?idJob=%d", jobId));
 	}
-	
+
+	protected URL getAppChainsUrlWithVersion (String context) {
+		return getBaseAppChainsUrl(String.format("/%s/%s", PROTOCOL_VERSION, context));
+	}
 	/**
 	 * Constructs base URL for accessing sequencing backend
-	 * @param jobId job identifier
+	 * @param context context identifier
 	 * @return URL
 	 */
 	protected URL getBaseAppChainsUrl(String context)
@@ -434,8 +490,8 @@ public class AppChains
 
 		try
 		{
-			remoteUrl = new URL(DEFAULT_APPCHAINS_SCHEMA, this.chainsHostname,
-					DEFAULT_APPCHAINS_PORT, String.format("/%s/%s", PROTOCOL_VERSION, context));
+			remoteUrl = new URL(DEFAULT_APPCHAINS_SCHEMA, this.chainsHostname, DEFAULT_APPCHAINS_PORT,
+					context);
 		}
 		catch (Exception e)
 		{
@@ -453,7 +509,7 @@ public class AppChains
 	 */
 	protected URL getJobSubmissionUrl(String applicationMethodName)
 	{
-		return getBaseAppChainsUrl(applicationMethodName);
+		return getAppChainsUrlWithVersion(applicationMethodName);
 	}
 
 	/**
@@ -469,7 +525,7 @@ public class AppChains
 		try
 		{
 			remoteUrl = new URL(DEFAULT_APPCHAINS_SCHEMA, BEACON_HOSTNAME,
-					DEFAULT_APPCHAINS_PORT, 
+					DEFAULT_APPCHAINS_PORT,
 					String.format("/%s/?%s", methodName, queryString));
 		}
 		catch (Exception e)
@@ -710,12 +766,16 @@ public class AppChains
 		
 		public void saveAs(String fullPathWithName) throws IOException
 		{
-			Files.copy(getStream(), Paths.get(fullPathWithName));
+			Path parentDir = (new File(fullPathWithName)).toPath().getParent();
+			if (!Files.exists(parentDir))
+				Files.createDirectories(parentDir);
+			Files.copy(getStream(), Paths.get(fullPathWithName), StandardCopyOption.REPLACE_EXISTING);
 		}
 		
 		public void saveTo(String location) throws IOException
 		{
-			Files.copy(getStream(), Paths.get(String.format("%s/%s", location, getName())));
+
+			saveAs(String.format("%s/%s", location, getName()));
 		}
 
 		public String getExtension()
