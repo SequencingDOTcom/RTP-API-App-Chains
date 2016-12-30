@@ -189,7 +189,7 @@ class AppChains(object):
     #: High level public API
     def getReport(self, remote_method_name, app_method_name, source_id):
         """Requests report
-        :param remote_method_name: REST endpoint name (i.e. v2/StartApp)
+        :param remote_method_name: REST endpoint name (i.e. StartApp)
         :param app_method_name: report/application specific identifier
         (i.e. MelanomaDsAppv)
         :param source_id: resource with data to use for report generation
@@ -209,7 +209,7 @@ class AppChains(object):
 
     def getReportBatch(self, remote_method_name, app_chain_param):
         """Requests report
-        :param remote_method_name remote_method_name: REST endpoint name (i.e. v2/StartAppBatch)
+        :param remote_method_name remote_method_name: REST endpoint name (i.e. StartAppBatch)
         :param appChainParam map of key app_method_name: report/application specific identifier
         (i.e. MelanomaDsAppv) value source_id: resource with data to use for report generation
         :return report_map of key app_method_name, value Report instance
@@ -343,7 +343,7 @@ class AppChains(object):
         return {'AppCode': application_method_name, 'Pars': [parameters]}
 
     def submitReportJob(self, remote_method_name,
-                          application_method_name, datasource_id):
+                        application_method_name, datasource_id):
         """Submits job to the API server
         :param remote_method_name: REST endpoint name (i.e. StartApp)
         :param application_method_name: report/application specific identifier
@@ -427,15 +427,15 @@ class AppChains(object):
         :param application_method_name: report/application specific identifier
          (i.e. MelanomaDsAppv)
         """
-        return '{}/{}'.format(
-            self.getBaseAppChainsUrl(), application_method_name
+        return '{}/{}/{}'.format(
+            self.getBaseAppChainsUrl(), self.PROTOCOL_VERSION,  application_method_name
         )
 
     def getBaseAppChainsUrl(self):
         """Constructs base Appchains URL"""
         return '{}://{}:{}'.format(
             self.DEFAULT_APPCHAINS_SCHEMA, self.hostname,
-            self.DEFAULT_APPCHAINS_PORT, self.PROTOCOL_VERSION)
+            self.DEFAULT_APPCHAINS_PORT)
 
     def getBeaconUrl(self, method_name, query_string):
         """Constructs URL for accessing beacon related remote endpoints
