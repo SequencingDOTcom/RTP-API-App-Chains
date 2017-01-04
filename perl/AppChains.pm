@@ -19,7 +19,7 @@ use constant
 	BEACON_HOSTNAME => "beacon.sequencing.com",
 	
 	# Default AppChains protocol version
-	PROTOCOL_VERSION => "v1"
+	PROTOCOL_VERSION => "v2"
 };
 
 sub new
@@ -47,8 +47,32 @@ sub new
 sub getReport
 {
 	my ($self, $remoteMethodName, $applicationMethodName, $datasourceId) = @_;
-	my $job = $self->submitReportJob("POST", $remoteMethodName, $applicationMethodName, $datasourceId);
-	return return $self->getReportImpl($job);
+	my $jobData = $self->submitReportJob("POST", $remoteMethodName, $applicationMethodName, $datasourceId);
+	return return $self->getReportImpl($jobData);
+}
+
+# Requests batch report
+# @param remoteMethodName REST endpoint name (i.e. StartApp)
+# @param applicationMethodName report/application specific identifier (i.e. MelanomaDsAppv)
+# @param datasourceId resource with data to use for report generation
+# @return
+sub getBatchReport
+{
+	my ($self, $remoteMethodName, $chainSpec) = @_;
+	
+	my $requestBody = JSON::encode_json($self->buildBatchReportRequestBody($remoteMethodName, $chainSpec));
+	my $batchJobData = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
+
+	my %result = ();
+	foreach (@$batchJobData) {
+		$result{$_ ->{Key}} = $self->getReportImpl($_ ->{Value});
+		#print JSON::encode_json($_ ->{Value});
+		
+		#getRawReportImpl
+		#getReportImpl
+	}
+	
+	return %result;
 }
 
 # Requests report
@@ -58,8 +82,8 @@ sub getReport
 sub getReportEx
 {
 	my ($self, $remoteMethodName, $requestBody) = @_;
-	my $job = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
-	return $self->getReportImpl($job);
+	my $jobData = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
+	return $self->getReportImpl($jobData);
 }
 
 # Returns sequencing beacon
@@ -91,8 +115,8 @@ sub getPublicBeacon
 sub getRawReport
 {
 	my ($self, $remoteMethodName, $applicationMethodName, $datasourceId) = @_;
-	my $job = $self->submitReportJob("POST", $remoteMethodName, $applicationMethodName, $datasourceId);
-	return $self->getRawReportImpl($job)->getSource();
+	my $jobData = $self->submitReportJob("POST", $remoteMethodName, $applicationMethodName, $datasourceId);
+	return $self->getRawReportImpl($jobData)->getSource();
 }
 
 # Returns beacon
@@ -113,8 +137,8 @@ sub getBeacon
 sub getRawReportEx
 {
 	my ($self, $remoteMethodName, $requestBody) = @_;
-	my $job = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
-	return $self->getRawReportImpl($job)->getSource();
+	my $jobData = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
+	return $self->getRawReportImpl($jobData)->getSource();
 }
 
 # Returns beacon
@@ -193,11 +217,11 @@ sub processCompletedJob
 # @return report
 sub getRawReportImpl
 {
-	my ($self, $job) = @_;
+	my ($self, $jobData) = @_;
 	
 	while (1)
 	{
-		my $rawResult = $self->getRawJobResult($job);
+		my $rawResult = $self->getRawJobResult($jobData);
 		
 		if ($rawResult->isCompleted())
 		{
@@ -205,7 +229,18 @@ sub getRawReportImpl
 		}
 		
 		sleep(DEFAULT_REPORT_RETRY_TIMEOUT);
+
+		$jobData = $self->getJobResponse($jobData->getJobId());
 	}
+}
+
+sub getJobResponse
+{
+	my ($self, $job) = @_;
+	
+	my $url = $self->getJobResultsUrl($job);
+	my $httpResponse = $self->httpRequest("GET", $url);
+	return JSON::decode_json($httpResponse->getResponseData());
 }
 
 # Retrieves raw job results data
@@ -213,12 +248,10 @@ sub getRawReportImpl
 # @return raw job results
 sub getRawJobResult
 {
-	my ($self, $job) = @_;
+	my ($self, $decodedResponse) = @_;
 	
-	my $url = $self->getJobResultsUrl($job->getJobId());
-	my $httpResponse = $self->httpRequest("GET", $url);
-	my $decodedResponse = JSON::decode_json($httpResponse->getResponseData());
-	
+	#my $decodedResponse = $self->getJobResponse($job->{Status}->{IdJob});
+		
 	my $status = $decodedResponse->{Status},
 	   $succeeded = 0;
 	
@@ -232,7 +265,7 @@ sub getRawJobResult
 	
 	my $result = RawReportJobResult->new;
 	$result->setSource($decodedResponse);
-	$result->setJobId($job->getJobId());
+	$result->setJobId($decodedResponse->{Status}->{IdJob});
 	$result->setSucceeded($succeeded);
 	$result->setCompleted(lc($jobStatus) eq "completed" || lc($jobStatus) eq "failed");
 	$result->setResultProps($decodedResponse->{ResultProps});
@@ -259,6 +292,36 @@ sub buildReportRequestBody
 	my %data = (
 			"AppCode" => $applicationMethodName,
 			"Pars" => \@pars);
+
+	return \%data;
+}
+
+# Builds request body used for batch report generation
+# @param applicationMethodName
+# @param chainSpec
+# @return
+sub buildBatchReportRequestBody
+{
+	my ($self, $applicationMethodName, $chainSpec) = @_;
+
+	my @result = ();
+	for my $c (keys %{$chainSpec})
+	{
+		my @pars = ();
+		my %data = (
+				"AppCode" => $c,
+				"Pars" => \@pars);
+				
+		my %parameters = (
+				"Name" => "dataSourceId", 
+				"Value" => $chainSpec->{$c});
+				
+		push(@pars, \%parameters);
+		push(@result, \%data);
+	}
+
+	my %data = (
+			"Pars" => \@result);
 
 	return \%data;
 }
@@ -295,16 +358,7 @@ sub submitReportJobImpl
 		return;
 	}
 	
-	my $decodedResponse = JSON::decode_json($responseData);
-	my $jobId = $decodedResponse->{jobId};
-	
-	unless ($jobId =~ /^\d+$/)
-	{
-		warn("Appchains returned invalid job identifier");
-		return;
-	}
-	
-	return Job->new($jobId);
+	return $decodedResponse = JSON::decode_json($responseData);
 }
 
 # Constructs URL for getting report file
@@ -363,6 +417,8 @@ sub getBaseAppChainsUrl
 sub httpRequest
 {
 	my ($self, $method, $url, $body, $saveTo) = @_;
+	
+	print "$method, $url, $body, $saveTo \n ";
 	
 	my $httpResponse = $self->httpRequestImpl($method, $url, $body, $saveTo);
 	
