@@ -80,8 +80,10 @@ namespace Sequencing.AppChainsSample
             var startAppBatch = backendFacade.StartAppBatch(new BatchAppStartParams() { Pars = paramsList });
 
             Dictionary<string, Report> reportAppResults = new Dictionary<string, Report>(startAppBatch.Count);
-            foreach (var appResult in startAppBatch)
-                reportAppResults[appResult.Key] = GetReportImpl(appResult.Value);       
+            var reportsList = GetReportImplBatch(startAppBatch.Values.ToList());
+
+            for (int i = 0; i < startAppBatch.Count; i++)  
+                reportAppResults[startAppBatch.ElementAt(i).Key] = reportsList[i];
 
             return reportAppResults;
         }
@@ -129,6 +131,58 @@ namespace Sequencing.AppChainsSample
             });
             return GetRawReportImpl(_startApp);
         }
+
+        protected List<Report> GetReportImplBatch(List<AppResultsHolder> resultHolder)
+        {
+            var reportList = new List<Report>();
+            var appChainsresult = GetRawReportImplBatch(resultHolder);
+            foreach (var res in appChainsresult)
+            {
+                reportList.Add(ProcessCompletedJob(res));
+            }
+            return reportList;
+        }
+
+        /// <summary>
+        /// Retrieves raw report data from the API server
+        /// </summary>
+        /// <param name="job">job id</param>
+        /// <returns></returns>
+        protected List<AppResultsHolder> GetRawReportImplBatch(List<AppResultsHolder> appResult)
+        {
+            while (true)
+            {
+                try
+                {
+                    List<long> noneCompletedJobs = new List<long>();
+
+                    foreach (var result in appResult)
+                        if(result.Status.Status != "Completed")
+                            noneCompletedJobs.Add(result.Status.IdJob);
+
+                    if (noneCompletedJobs.Count == 0)
+                        return appResult;
+
+                    Task.Delay(DEFAULT_REPORT_RETRY_TIMEOUT).Wait();
+
+                    var appChainsRes = backendFacade.GetAppResultsBatch(new { JobIds = noneCompletedJobs });
+                    for (int k = 0; k < appResult.Count; k++)
+                    {
+                        var updateResult = appChainsRes.Select(r => r).Where(i => i.Status.IdJob == appResult[k].Status.IdJob).FirstOrDefault();
+                        if (updateResult != null)
+                            appResult[k] = updateResult;
+                    }
+ 
+                    //appResult.Select(r =>r.Status.IdJob).ToList().Contains(res.Select(i =>i.Status.IdJob));
+                    //var jobsResult = appResult.Where(r => r.Status.IdJob != res.Contains());
+                }
+                catch (Exception e)
+                {
+                    throw new ApplicationException("Error processing jobs", e);
+                }
+            }
+        }
+
 
         /// <summary>
         /// Retrieves report data from the API server
@@ -208,7 +262,7 @@ namespace Sequencing.AppChainsSample
         protected Uri GetReportFileUrl(string fileId)
         {
             var _uri = new Uri(backendFacade.ServiceUrl);
-            return new Uri(_uri, string.Format("/GetReportFile?id={0}", fileId));
+            return new Uri(_uri, string.Format("/GetReportFile?idJob={0}", fileId));
         }
     }
 }
