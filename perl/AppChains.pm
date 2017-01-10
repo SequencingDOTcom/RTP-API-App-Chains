@@ -62,17 +62,8 @@ sub getBatchReport
 	
 	my $requestBody = JSON::encode_json($self->buildBatchReportRequestBody($remoteMethodName, $chainSpec));
 	my $batchJobData = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
-
-	my %result = ();
-	foreach (@$batchJobData) {
-		$result{$_ ->{Key}} = $self->getReportImpl($_ ->{Value});
-		#print JSON::encode_json($_ ->{Value});
-		
-		#getRawReportImpl
-		#getReportImpl
-	}
 	
-	return %result;
+	return $self->getBatchReportImpl($batchJobData);
 }
 
 # Requests report
@@ -163,6 +154,22 @@ sub getBeaconParameters
 	return \%parameters;
 }
 
+# Retrieves report data from the API server using batch approach
+# @param job identifier to retrieve report
+# @return report
+sub getBatchReportImpl
+{
+	my ($self, $batchJobData) = @_;
+	my $jobs = $self->getBatchRawReportImpl($batchJobData);
+	my %result = ();
+	
+	foreach (keys %$jobs) {
+		$result{$_} = $self->processCompletedJob($jobs->{$_});
+	}
+	
+	return \%result;
+}
+
 # Retrieves report data from the API server
 # @param job identifier to retrieve report
 # @return report
@@ -179,7 +186,7 @@ sub processCompletedJob
 {
 	my ($self, $rawResult) = @_;
 	
-	@results = ();
+	my @results = ();
 		
 	foreach (@{$rawResult->getResultProps()})
 	{
@@ -223,14 +230,51 @@ sub getRawReportImpl
 	{
 		my $rawResult = $self->getRawJobResult($jobData);
 		
-		if ($rawResult->isCompleted())
-		{
+		if ($rawResult->isCompleted()) {
 			return $rawResult;
 		}
 		
 		sleep(DEFAULT_REPORT_RETRY_TIMEOUT);
 
 		$jobData = $self->getJobResponse($jobData->getJobId());
+	}
+}
+
+# Retrieves report data from the API server
+# @param job identifier to retrieve report
+# @return report
+sub getBatchRawReportImpl
+{
+	my ($self, $batchJobData) = @_;
+	my %result = ();
+	my %jobIdsPending = ();
+	my %jobIdsCompleted = ();
+	
+	while (1)
+	{
+		foreach (@$batchJobData)
+		{
+			my $job = $self->getRawJobResult($_ ->{Value});
+			
+			if ($job->isCompleted()) {
+				$jobIdsCompleted{$job->getJobId()} = 1;
+				$result{$_ ->{Key}} = $job;
+			} else {
+				$jobIdsPending{$job->getJobId()} = 1;
+			}
+		}
+		
+		my @pendingJobs = keys %jobIdsPending;
+		my @completedJobs = keys %jobIdsCompleted;
+		
+		if (scalar @pendingJobs > 0) {
+			$batchJobData = $self->getBatchJobResponse(\@pendingJobs);
+		} else {
+			return \%result;
+		}
+		
+		%jobIdsPending = ();
+		sleep(DEFAULT_REPORT_RETRY_TIMEOUT);
 	}
 }
 
@@ -243,6 +287,19 @@ sub getJobResponse
 	return JSON::decode_json($httpResponse->getResponseData());
 }
 
+sub getBatchJobResponse
+{
+	my ($self, $jobs) = @_;
+	
+	my $url = $self->getBatchJobResultsUrl();
+	my %requestData = ("JobIds" => $jobs);
+	
+	my $httpResponse = $self->httpRequest("POST", $url, JSON::encode_json(\%requestData));
+	
+	return JSON::decode_json($httpResponse->getResponseData());
+}
+
+
 # Retrieves raw job results data
 # @param job job identifier
 # @return raw job results
@@ -250,8 +307,6 @@ sub getRawJobResult
 {
 	my ($self, $decodedResponse) = @_;
 	
-	#my $decodedResponse = $self->getJobResponse($job->{Status}->{IdJob});
-		
 	my $status = $decodedResponse->{Status},
 	   $succeeded = 0;
 	
@@ -357,7 +412,7 @@ sub submitReportJobImpl
 		warn(sprintf("Appchains returned error HTTP code %d with message %s", $responseCode, $responseData));
 		return;
 	}
-	
+
 	return $decodedResponse = JSON::decode_json($responseData);
 }
 
@@ -378,6 +433,13 @@ sub getJobResultsUrl
 	my ($self, $jobId) = @_;
 	return return sprintf("%s/GetAppResults?idJob=%d", $self->getBaseAppChainsUrl(), $jobId);
 }
+
+sub getBatchJobResultsUrl
+{
+	my ($self) = @_;
+	return return sprintf("%s/GetAppResultsBatch", $self->getBaseAppChainsUrl());
+}
+
 
 # Constructs URL for job submission
 # @param applicationMethodName report/application specific identifier (i.e. MelanomaDsAppv)
@@ -418,15 +480,11 @@ sub httpRequest
 {
 	my ($self, $method, $url, $body, $saveTo) = @_;
 	
-	print "$method, $url, $body, $saveTo \n ";
-	
 	my $httpResponse = $self->httpRequestImpl($method, $url, $body, $saveTo);
-	
 	my $responseBody = $httpResponse->content,
 	   $responseCode = $httpResponse->code;
-	
-	if ($responseCode != 200)
-	{
+	   
+	if ($responseCode != 200) {
 		warn("Error retrieving data from $url ($method, '$body'): $responseBody");
 		return;
 	}
@@ -452,12 +510,9 @@ sub httpRequestImpl
 	
 	my $httpRequest;
 	
-	if ($method eq "GET")
-	{
+	if ($method eq "GET") {
 		$httpRequest = $self->createHttpGetConnection($url);
-	}
-	else
-	{
+	} else {
 		$httpRequest = $self->createHttpPostConnection($url, $body);
 	}
 	
