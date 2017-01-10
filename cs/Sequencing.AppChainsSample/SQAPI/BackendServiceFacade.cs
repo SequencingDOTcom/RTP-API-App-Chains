@@ -90,6 +90,18 @@ namespace Sequencing.AppChainsSample.SQAPI
             return ExecuteRq<AppResultsHolder>(_restRequest);
         }
 
+        public List<AppResultsHolder> GetAppResultsBatch(dynamic idJob)
+        {
+            var _restRequest = CreateRq("GetAppResultsBatch", Method.POST);
+            _restRequest.AddParameter(new Parameter
+            {
+                Name = "application/json",
+                Value = JsonConvert.SerializeObject(idJob),
+                Type = ParameterType.RequestBody
+            });
+            return ExecuteRq<List<AppResultsHolder>>(_restRequest);
+        }
+
         /// <summary>
         /// Starts app chain execution
         /// </summary>
