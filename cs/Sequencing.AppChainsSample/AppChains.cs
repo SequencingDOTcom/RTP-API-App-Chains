@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using Sequencing.AppChainsSample.SQAPI;
@@ -78,14 +79,7 @@ namespace Sequencing.AppChainsSample
                     Pars = { new NewJobParameter("dataSourceId", appParameter.Value) }
                 });
             var startAppBatch = backendFacade.StartAppBatch(new BatchAppStartParams() { Pars = paramsList });
-
-            Dictionary<string, Report> reportAppResults = new Dictionary<string, Report>(startAppBatch.Count);
-            var reportsList = GetReportImplBatch(startAppBatch.Values.ToList());
-
-            for (int i = 0; i < startAppBatch.Count; i++)  
-                reportAppResults[startAppBatch.ElementAt(i).Key] = reportsList[i];
-
-            return reportAppResults;
+            return GetReportImplBatch(startAppBatch);
         }
 
         /// <summary>
@@ -132,14 +126,12 @@ namespace Sequencing.AppChainsSample
             return GetRawReportImpl(_startApp);
         }
 
-        protected List<Report> GetReportImplBatch(List<AppResultsHolder> resultHolder)
+        protected Dictionary<string, Report>  GetReportImplBatch(Dictionary<string, AppResultsHolder> resultHolder)
         {
-            var reportList = new List<Report>();
+            var reportList = new Dictionary<string, Report>();
             var appChainsresult = GetRawReportImplBatch(resultHolder);
             foreach (var res in appChainsresult)
-            {
-                reportList.Add(ProcessCompletedJob(res));
-            }
+                reportList[res.Key] = ProcessCompletedJob(res.Value);
             return reportList;
         }
 
@@ -148,7 +140,7 @@ namespace Sequencing.AppChainsSample
         /// </summary>
         /// <param name="job">job id</param>
         /// <returns></returns>
-        protected List<AppResultsHolder> GetRawReportImplBatch(List<AppResultsHolder> appResult)
+        protected Dictionary<string, AppResultsHolder> GetRawReportImplBatch(Dictionary<string, AppResultsHolder> appResult)
         {
             while (true)
             {
@@ -157,8 +149,8 @@ namespace Sequencing.AppChainsSample
                     List<long> noneCompletedJobs = new List<long>();
 
                     foreach (var result in appResult)
-                        if(result.Status.Status != "Completed")
-                            noneCompletedJobs.Add(result.Status.IdJob);
+                        if(result.Value.Status.Status != "Completed")
+                            noneCompletedJobs.Add(result.Value.Status.IdJob);
 
                     if (noneCompletedJobs.Count == 0)
                         return appResult;
@@ -166,15 +158,15 @@ namespace Sequencing.AppChainsSample
                     Task.Delay(DEFAULT_REPORT_RETRY_TIMEOUT).Wait();
 
                     var appChainsRes = backendFacade.GetAppResultsBatch(new { JobIds = noneCompletedJobs });
-                    for (int k = 0; k < appResult.Count; k++)
+                    foreach (var chainRes in appResult.ToList())
                     {
-                        var updateResult = appChainsRes.Select(r => r).Where(i => i.Status.IdJob == appResult[k].Status.IdJob).FirstOrDefault();
-                        if (updateResult != null)
-                            appResult[k] = updateResult;
+                        var updateResult = appChainsRes.Select(r => r).Where(i => i.Value.Status.IdJob == chainRes.Value.Status.IdJob).FirstOrDefault();
+                        if (!updateResult.Equals(default(KeyValuePair<string, AppResultsHolder>)))
+                        {
+                            var updatedEntry = new KeyValuePair<string, AppResultsHolder>(chainRes.Key, updateResult.Value);
+                            appResult[chainRes.Key] = updatedEntry.Value;
+                        }
                     }
- 
-                    //appResult.Select(r =>r.Status.IdJob).ToList().Contains(res.Select(i =>i.Status.IdJob));
-                    //var jobsResult = appResult.Where(r => r.Status.IdJob != res.Contains());
                 }
                 catch (Exception e)
                 {
@@ -262,7 +254,7 @@ namespace Sequencing.AppChainsSample
         protected Uri GetReportFileUrl(string fileId)
         {
             var _uri = new Uri(backendFacade.ServiceUrl);
-            return new Uri(_uri, string.Format("/GetReportFile?idJob={0}", fileId));
+            return new Uri(_uri, string.Format("GetReportFile?idJob={0}", fileId));
         }
     }
 }
