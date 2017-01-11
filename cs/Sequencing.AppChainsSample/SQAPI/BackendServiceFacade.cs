@@ -90,7 +90,7 @@ namespace Sequencing.AppChainsSample.SQAPI
             return ExecuteRq<AppResultsHolder>(_restRequest);
         }
 
-        public List<AppResultsHolder> GetAppResultsBatch(dynamic idJob)
+        public Dictionary<string, AppResultsHolder> GetAppResultsBatch(dynamic idJob)
         {
             var _restRequest = CreateRq("GetAppResultsBatch", Method.POST);
             _restRequest.AddParameter(new Parameter
@@ -99,7 +99,7 @@ namespace Sequencing.AppChainsSample.SQAPI
                 Value = JsonConvert.SerializeObject(idJob),
                 Type = ParameterType.RequestBody
             });
-            return ExecuteRq<List<AppResultsHolder>>(_restRequest);
+            return ExecuteRqExtended(_restRequest);
         }
 
         /// <summary>
