@@ -97,6 +97,7 @@ Method  | Purpose | Arguments | Description
 ------------- | ------------- | ------------- | -------------
 `public AppChains(String token, String chainsHostname)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsHostname** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
 `public Report getReport(String remoteMethodName, String applicationMethodName, String datasourceId)`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+`public Map<String, Report> getReportBatch(String remoteMethodName, Map<String, String> appChainsParams)`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **appChainsParams** - map of chain and file identifiers <br>
 
 Prerequisites:
 * Add Google GSON into your classpath
@@ -108,112 +109,41 @@ After that you can start utilizing Reporting API
 
 ```java
 AppChains chains = new AppChains("<your token>", "api.sequencing.com");
-Report result = chains.getReport("StartApp", "<chain id>", "<file id>");
+
+// retrieving single chain result
+Report result = chains.getReport(
+		"StartApp",
+		"Chain8", // chain identifier
+		"227680"  // file identifier
+		);
 
 if (result.isSucceeded() == false)
 	System.out.println("Request has failed");
 else
 	System.out.println("Request has succeeded");
-		
-for (Result r : result.getResults())
-{
-	ResultType type = r.getValue().getType();
-			
-	if (type == ResultType.TEXT)
-	{
-		TextResultValue v = (TextResultValue) r.getValue();
-		System.out.println(String.format(" -> text result type %s = %s", r.getName(), v.getData()));
-	}
-			
-	if (type == ResultType.FILE)
-	{
-		FileResultValue v = (FileResultValue) r.getValue();
-		System.out.println(String.format(" -> file result type %s = %s", r.getName(), v.getUrl()));
-		v.saveTo("d:/data");
-	}
-}
+
+printReport(result);
+
+// retrieving multiple chain results
+Map<String, String> appChainsParams = new HashMap<String, String>();
+appChainsParams.put("Chain9",  "227680");
+appChainsParams.put("Chain88", "227680");
+
+Map<String, Report> reportMap = chains.getReportBatch("StartAppBatch", appChainsParams);
+printReport(reportMap.get("Chain9"));
+printReport(reportMap.get("Chain88"));
+
 ```
+
+See "printReport" reference [here](https://github.com/SequencingDOTcom/App-Chains-Sequencing.com-Real-Time-API/blob/feature/protocol-v2/java/src/main/java/com/sequencing/appchains/UsageExample.java)
 
 ### Objective-C
 
-AppChains Objective-C API overview
-
-Method  | Purpose | Arguments | Description
-------------- | ------------- | ------------- | -------------
-`-(instancetype)initWithToken:(NSString *)token` | Constructor | **token** - security token provided by sequencing.com | 
-`-(instancetype)initWithToken:(NSString *)token withHostName:(NSString *)hostName`  | Constructor | **token** - security token provided by sequencing.com <br> **hostName** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
-`- (void)getReportWithRemoteMethodName:(NSString *)remoteMethodName             withApplicationMethodName:(NSString *)applicationMethodName                      withDatasourceId:(NSString *)datasourceId withSuccessBlock:(void (^)(Report *result))success withFailureBlock:(void (^)(NSError *error))failure`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br> <br> **success** - callback executed on success operation<br> **failure** - callback executed on operation failure
-
-Adding code to the project:
-* Add AppChains.h, AppChains.m into your source folder and import AppChains in your Objective-C source file (```#import "AppChains.h"```).
-
-After that you can start utilizing Reporting API
-
-```objectivec
-[appChains getReportWithRemoteMethodName:@"StartApp"
-               withApplicationMethodName:@"<chain id>"
-                        withDatasourceId:@"<file id>"
-                        withSuccessBlock:^(Report *result) {
-                               NSArray *arr = [result getResults];
-                               for (Result *obj in arr) {
-                                    ResultValue *frv = [obj getValue];
-
-                                    if ([frv getType] == kResultTypeFile) {
-                                        [(FileResultValue *)frv saveToLocation:@"/tmp/"];
-                                    }
-                                }
-                            } withFailureBlock:^(NSError *error) {
-                                NSLog(@"Error occured: %@", [error description]);
-                            }];
-```
+For Objective-C code, reference and integration instructions please check details [here](https://github.com/SequencingDOTcom/CocoaPod-iOS-App-Chains-ObjectiveC#objective-c)
 
 ### Swift
 
-AppChains Swift API overview
-
-Method  | Purpose | Arguments | Description
-------------- | ------------- | ------------- | -------------
-`init(token: String, chainsHostname: String)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsHostname** - API server hostname. api.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
-`func getReport(remoteMethodName: String, applicationMethodName: String, datasourceId: String) -> ReturnValue<Report>`  | Reporting API | **remoteMethodName** - REST endpoint name, use "StartApp" <br> **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
-
-Prerequisites:
-* Swift v1 compatible compiler
-
-Adding code to the project:
-* Add AppChains.swift into your source folder.
-
-After that you can start utilizing Reporting API
-
-```swift
-let chains = AppChains(token: "<your token>", chainsHostname: "api.sequencing.com")
-
-let report:ReturnValue<Report> = chains.getReport("StartApp", applicationMethodName: "<chain id>", datasourceId: "<file id>")
-
-if let r = report.value
-{
-    for x:Result in r.results
-        
-    {
-        let type:ResultType = x.value.type;
-        switch (type)
-        {
-            case ResultType.TEXT:
-                let v:TextResultValue = x.value as TextResultValue
-                println(String(format: " -> text result type %@ = %@", x.name, v.data));
-            break;
-            case ResultType.FILE:
-                let v:FileResultValue = x.value as FileResultValue
-                println(String(format: " -> text result type %@ = %@", x.name, v.url));
-                v.saveTo("/tmp")
-            break;
-        }
-    }
-}
-else
-{
-    println("Error occured: " + report.error!)
-}
-```
+For Objective-C code, reference and integration instructions please check details [here](https://github.com/SequencingDOTcom/CocoaPod-iOS-App-Chains-Swift)
 
 ## C# ##
 
@@ -223,6 +153,7 @@ Method  | Purpose | Arguments | Description
 ------------- | ------------- | ------------- | -------------
 `public AppChains(string token, string chainsUrl, string beaconsUrl)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsUrl** - API server hostname. api.sequencing.com by default <br> **beaconsUrl** - beacons API server hostname. https://beacon.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
 `public Report GetReport(string applicationMethodName, string datasourceId)`  | Reporting API | **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
+`public Report GetReportBatch(Dictionary<string, string> appChainsParams)`  | Reporting API | **appChainsParams** - map of chain and file identifiers <br>
 
 Prerequisites:
 * Add Newtonsoft.Json and RestSharp nuget packages into your project
