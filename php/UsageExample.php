@@ -26,7 +26,7 @@
         }
     }
 
-    $chains = new AppChains("", "api.sequencing.com");
+    $chains = new AppChains("<your token goes here>", "api.sequencing.com");
 	
 	echo "Beacons\n";
 	/*$beaconResult = $chains->getPublicBeacon(1, 2, "A");
@@ -36,16 +36,19 @@
 	$chainsRawResult = $chains->getRawReport("StartApp", "Chain9", "227680");
 	print_r($chainsRawResult);
 		
-	$chainsResult = $chains->getReport("StartApp", "Chain9", "227680");
+	$chainsResult = $chains->getReport("StartApp", "Chain90", "227680");
 
     /**
      * @param $chainsResult
      */
     printReport($chainsResult);
 
-    $chainsBatchResult = $chains->getReportBatch("StartAppBatch", array("Chain9" => "227680", "Chain88" => "227680"));
+    $chainsBatchResult = $chains->getBatchReport("StartAppBatch", array("Chain91" => "227680", "Chain88" => "227680"));
 
     foreach ($chainsBatchResult as $key => $value){
+        echo "-> Chain ID:";
+        echo $key;
+        echo "\n";
         printReport($value);
     }
 

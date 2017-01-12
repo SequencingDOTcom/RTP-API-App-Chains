@@ -29,15 +29,15 @@ public class UsageExample
 		 * High level method invocation example
 		 */
 		
-		Report result = chains.getReport("StartApp", "Chain9", "227680");
+		Report result = chains.getReport("StartApp", "Chain11", "227680");
 		printReport(result);
 
 		Map<String, String> appChainsParams = new HashMap<String, String>();
-		appChainsParams.put("Chain99",  "227680");
-		appChainsParams.put("Chain98",  "227680");
+		appChainsParams.put("Chain9",  "227680");
+		appChainsParams.put("Chain88",  "227680");
 		Map<String, Report> reportMap = chains.getReportBatch("StartAppBatch", appChainsParams);
-		printReport(reportMap.get("Chain98"));
-		printReport(reportMap.get("Chain99"));
+		printReport(reportMap.get("Chain9"));
+		printReport(reportMap.get("Chain88"));
 
 	}
 	

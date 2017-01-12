@@ -214,20 +214,10 @@ class AppChains(object):
         (i.e. MelanomaDsAppv) value source_id: resource with data to use for report generation
         :return report_map of key app_method_name, value Report instance
         """
-        request_params = []
-        for application_method_name in app_chain_param:
-            request_params.append(
-                self.buildReportRequestBody(application_method_name, app_chain_param[application_method_name]))
-        request_body = json.dumps({'Pars': request_params})
-        decoded_response = self.submitReportJobImpl(remote_method_name, request_body)
-        report_map = {}
-        for decoded_response_item in decoded_response:
-            report_map[decoded_response_item.get("Key")] = \
-                self.getReportImpl(self.getRawJobResult(decoded_response_item.get("Value")))
-        return report_map
+        requestBody = self.buildBatchReportRequestBody(app_chain_param)
+        batchJobData = self.submitReportJobImpl(remote_method_name, requestBody)
 
-    def getBatchReport(self, remote_method_name, request_params):
-        self.getReportImpl(remote_method_name, request_params)
+        return  self.getBatchReportImpl(batchJobData)
 
     def getSequencingBeacon(self, chrom, pos, allele):
         """Returns sequencing beacon"""
@@ -292,6 +282,17 @@ class AppChains(object):
         """
         return self.processCompletedJob(self.getRawReportImpl(raw_result))
 
+    def getBatchReportImpl(self, batchJobData):
+        """Retrieves report data from the API server
+        :param job: identifier to retrieve report
+        :return: report
+        """
+        jobs = self.getBatchRawReportImpl(batchJobData)
+        result = {}
+        for job in jobs:
+            result[job] = self.processCompletedJob(jobs[job])
+        return result
+
     def getRawReportImpl(self, raw_result):
         """Retrieves report data from the API server
         :param job: identifier to retrieve report
@@ -302,6 +303,32 @@ class AppChains(object):
                 return raw_result
             time.sleep(self.DEFAULT_REPORT_RETRY_TIMEOUT)
             raw_result = self.getRawJobResult(self.getJobResponce(raw_result.getJobId()))
+
+    def getBatchRawReportImpl(self, batchJobData):
+        """Retrieves report data from the API server
+        :param job: identifier to retrieve report
+        :return: report
+        """
+        result = {}
+        jobIdsPending = []
+
+        while True:
+            for batchJobDataItem in batchJobData:
+                job = self.getRawJobResult(batchJobDataItem.get('Value'))
+
+                if job.isCompleted():
+                    result[batchJobDataItem.get('Key')] = job
+                else:
+                    jobIdsPending.append(job.getJobId())
+
+            if len(jobIdsPending) > 0 :
+                batchJobData = self.getBatchJobResponse(jobIdsPending)
+            else:
+                return result
+
+            jobIdsPending = []
+            time.sleep(self.DEFAULT_REPORT_RETRY_TIMEOUT)
+
 
     def processCompletedJob(self, raw_result):
         """Handles raw report result by transforming it to user friendly state"""
@@ -342,6 +369,18 @@ class AppChains(object):
         parameters = {'Name': 'dataSourceId', 'Value': datasource_id}
         return {'AppCode': application_method_name, 'Pars': [parameters]}
 
+    def buildBatchReportRequestBody(self, app_chain_param):
+        """Builds request body used for report generation
+        :param app_chain_param application_method_name datasource_id:
+        :return:
+        """
+        request_params = []
+        for application_method_name in app_chain_param:
+            request_params.append(
+                self.buildReportRequestBody(application_method_name, app_chain_param[application_method_name]))
+        request_body = json.dumps({'Pars': request_params})
+        return request_body
+
     def submitReportJob(self, remote_method_name,
                         application_method_name, datasource_id):
         """Submits job to the API server
@@ -363,8 +402,19 @@ class AppChains(object):
         """
         url = self.getJobResultsUrl(job_id)
         http_response = self.httpRequest(url)
-        response_code = http_response.getResponseCode()
         return json.loads(http_response.getResponseData())
+
+    def getBatchJobResponse(self, jobs):
+        """Submits job to the API server
+        :param job: job identifier
+        :return: job responce
+        """
+        url = self.getBatchJobResultsUrl()
+        requestData = {"JobIds":jobs}
+
+        httpResponse = self.httpRequest(url, json.dumps(requestData))
+
+        return json.loads(httpResponse.getResponseData())
 
     def submitReportJobImpl(self, remote_method_name, request_body):
         """Submits job to the API server
@@ -421,6 +471,13 @@ class AppChains(object):
         """
         return '{}/GetAppResults?idJob={}'.format(
             self.getBaseAppChainsUrl(), job_id)
+
+    def getBatchJobResultsUrl(self):
+        """Constructs URL for getting job results
+        :return: URL
+        """
+        return '{}/{}/{}'.format(
+            self.getBaseAppChainsUrl(), self.PROTOCOL_VERSION,  "GetAppResultsBatch")
 
     def getJobSubmissionUrl(self, application_method_name):
         """Constructs URL for job submission
@@ -479,3 +536,5 @@ class AppChains(object):
         """Configures cURL handle by adding authorization headers"""
         return {'Authorization': 'Bearer {}'.format(self.token),
                 'Content-Type': 'application/json'}
+
+

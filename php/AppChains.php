@@ -87,20 +87,12 @@ class AppChains
      * @param $appChainParam applicationMethodName, datasourceId map
      * @return
      */
-    public function getReportBatch($remoteMethodName, $appChainParam)
+    public function getBatchReport($remoteMethodName, $appChainParam)
     {
-        $requestParams = [];
-        foreach ($appChainParam as $applicationMethodName => $datasourceId){
-            $requestParams[] = $this->buildReportRequestBody($applicationMethodName, $datasourceId);
-        }
-        $requestBody = json_encode(array('Pars' => $requestParams));
-        $decodedResponse = $this->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
+        $requestBody = json_encode($this->buildBatchReportRequestBody($appChainParam));
+        $batchJobData = $this->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
 
-        foreach($decodedResponse as $decodedResponseItem){
-            $reportMap[$decodedResponseItem["Key"]] =
-                $this->getReportImpl($this->getRawJobResult($decodedResponseItem["Value"]));
-        }
-        return $reportMap;
+        return $this->getBatchReportImpl($batchJobData);
     }
 	
 	/**
@@ -193,6 +185,23 @@ class AppChains
 	}
 
 	/**
+     * Retrieves report data from the API server using batch approach
+     * @param $batchJobData
+     * @return reportList
+     */
+    protected function getBatchReportImpl($batchJobData)
+    {
+        $jobs = $this->getBatchRawReportImpl($batchJobData);
+
+        $result = [];
+
+        foreach ($jobs as $key => $value) {
+            $result[$key] = $this->processCompletedJob($value);
+        }
+        return $result;
+    }
+
+	/**
 	 * Retrieves report data from the API server
 	 * @param job identifier to retrieve report
 	 * @return report
@@ -211,6 +220,35 @@ class AppChains
 			sleep(self::DEFAULT_REPORT_RETRY_TIMEOUT);
 		}
 	}
+	
+    # Retrieves report data from the API server
+    # @param job identifier to retrieve report
+    # @return report
+    protected function getBatchRawReportImpl($batchJobData) {
+        $result = [];
+        $jobIdsPending = [];
+
+        while(1) {
+            foreach ($batchJobData as $batchJobDataItem) {
+                $job = $this->getRawJobResult($batchJobDataItem["Value"]);
+
+                if ($job->isCompleted()) {
+                    $result[$batchJobDataItem["Key"]] = $job;
+                } else {
+                    $jobIdsPending[] = $job->getJobId();
+                }
+            }
+
+            if (count($jobIdsPending) > 0) {
+                $batchJobData = $this->getBatchJobResponse($jobIdsPending);
+            } else {
+                return $result;
+            }
+
+            $jobIdsPending = [];
+            sleep(self::DEFAULT_REPORT_RETRY_TIMEOUT);
+        }
+    }
 	
 	/**
 	 * Handles raw report result by transforming it to user friendly state
@@ -260,6 +298,14 @@ class AppChains
         $httpResponse = $this->httpRequest("GET", $url);
         return json_decode($httpResponse->getResponseData(), true);
 	}
+
+    protected function getBatchJobResponse($jobs) {
+        $url = $this->getBatchJobResultsUrl();
+        $requestData = ["JobIds" => $jobs];
+
+        $httpResponse = $this->httpRequest("POST", $url, json_encode($requestData));
+        return json_decode($httpResponse->getResponseData(), true);
+    }
 	/**
 	 * Retrieves raw job results data
 	 * @param job job identifier
@@ -296,11 +342,11 @@ class AppChains
 	 * @param datasourceId
 	 * @return
 	 */
-	protected function buildReportRequestBody($applicationMethodName, $datasourceId)
+	protected function buildReportRequestBody($applicationMethodName, $dataSourceId)
 	{
 		$parameters = array(
 				"Name" => "dataSourceId", 
-				"Value" => $datasourceId);
+				"Value" => $dataSourceId);
 				
 		$data = array(
 				"AppCode" => $applicationMethodName,
@@ -309,6 +355,18 @@ class AppChains
 		return $data;
 	}
 	
+	/**
+     * @param $appChainParam
+     * @return array
+     */
+    protected function buildBatchReportRequestBody($appChainParam)
+    {
+        $requestParams = [];
+        foreach ($appChainParam as $applicationMethodName => $dataSourceId) {
+            $requestParams[] = $this->buildReportRequestBody($applicationMethodName, $dataSourceId);
+        }
+        return array('Pars' => $requestParams);
+    }
 	/**
 	 * Submits job to the API server
 	 * @param httpMethod HTTP method to access API server
@@ -365,6 +423,14 @@ class AppChains
 		return sprintf("%s/GetAppResults?idJob=%d", $this->getBaseAppChainsUrl(), $jobId);
 	}
 	
+	/**
+     * Constructs URL for getting job results
+     * @return URL
+     */
+    private function getBatchJobResultsUrl() {
+        return sprintf("%s/%s/GetAppResultsBatch", $this->getBaseAppChainsUrl(), self::PROTOCOL_VERSION);
+    }
+
 	/**
 	 * Constructs URL for job submission
 	 * @param applicationMethodName report/application specific identifier (i.e. MelanomaDsAppv)
@@ -426,7 +492,7 @@ class AppChains
 		$responseBody = curl_exec($curlHandle);
 		$responseCode = curl_getinfo($curlHandle, CURLINFO_HTTP_CODE);
 		
-		if ($errorCode = curl_errno($curlHandle))
+		if ($responseCode != 200)
 		{
 		    throw new Exception("Error retrieving data from $url ($method, '$body'): " . curl_error($curlHandle));
 		}

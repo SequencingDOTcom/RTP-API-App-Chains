@@ -85,7 +85,9 @@ public class AppChains
 	 */
 	public Report getReport(String remoteMethodName, String applicationMethodName, String datasourceId)
 	{
-		return getReportImpl("POST", remoteMethodName, toJson(buildReportRequestBody(applicationMethodName, datasourceId)));
+		RawReportJobResult rawReportJobResult =
+				getRawJobResult(submitReportJob(remoteMethodName, applicationMethodName, datasourceId));
+		return 	getReportImpl(rawReportJobResult);
 	}
 	
 	/**
@@ -96,36 +98,39 @@ public class AppChains
 	 */
 	public Report getReport(String remoteMethodName, String requestBody)
 	{
-		return getReportImpl("POST", remoteMethodName, requestBody);
+		RawReportJobResult rawReportJobResult =
+				getRawJobResult((Map<String, Object>) submitReportJob(remoteMethodName, requestBody));
+		return 	getReportImpl(rawReportJobResult);
 	}
 
 	public Map<String, Report> getReportBatch(String remoteMethodName, Map<String, String> appChainsParams)
 	{
-		List<Map<String, Object>> paramsList = new ArrayList<Map<String, Object>>();
+		Map<String, Object> requestBody = buildBatchReportRequestBody(appChainsParams);
+		List<Map<String, Object>> batchJobData  =
+				(List<Map<String, Object>>) submitReportJob(remoteMethodName, toJson(requestBody));
 
-		for (Map.Entry<String, String> appParameter : appChainsParams.entrySet()) {
-			paramsList.add(buildReportRequestBody(appParameter.getKey(), appParameter.getValue()));
+		return getBatchReportImpl(batchJobData);
 		}
 
-		HttpResponse httpResponse = httpRequest("POST", getJobSubmissionUrl(remoteMethodName),  "{\"Pars\":" + toJson(paramsList) + "}");
-		List<Map<String, Object>> decodedResponse = (List<Map<String, Object>>) fromJson(httpResponse.responseData);
-		List<RawReportJobResult> rawReportJobResultList = getRawJobResultBatch(decodedResponse);
-		rawReportJobResultList = getRawReportImpl(rawReportJobResultList);
-		List<Report> reportList = getReportImplBatch(rawReportJobResultList);
-		Map<String, Report> reportMap = new HashMap<String, Report>();
+	private Map<String, Report> getBatchReportImpl(List<Map<String, Object>> batchJobData) {
+		Map<String, RawReportJobResult> jobs = getBatchRawReportImpl(batchJobData);
 
-		for (int i = 0; i < decodedResponse.size(); i++) {
-			reportMap.put((String) decodedResponse.get(i).get("Key"), reportList.get(i));
+		Map<String, Report> result = new HashMap<String, Report>(jobs.size());
+
+		for (Map.Entry<String, RawReportJobResult> job : jobs.entrySet()) {
+			result.put(job.getKey(), processCompletedJob(job.getValue()));
 		}
-		return reportMap;
+		return result;
 	}
 
-	private List<Report> getReportImplBatch(List<RawReportJobResult> rawReportJobResultList) {
-		List<Report> reportList = new ArrayList<Report>();
-		for(RawReportJobResult reportJobResult:rawReportJobResultList){
-			reportList.add(processCompletedJob(reportJobResult));
+	private Map<String, Object> buildBatchReportRequestBody(Map<String, String> appChainsParams) {
+		List<Map<String, Object>> paramsList = new ArrayList<Map<String, Object>>(appChainsParams.size());
+		for (Entry<String, String> appParameter : appChainsParams.entrySet()) {
+			paramsList.add(buildReportRequestBody(appParameter.getKey(), appParameter.getValue()));
 		}
-		return reportList;
+		Map<String, Object> requestBody = new HashMap<String, Object>(1);
+		requestBody.put("Pars", paramsList);
+		return requestBody;
 	}
 
 	/**
@@ -200,7 +205,7 @@ public class AppChains
 
 	private Map<String, String> getBeaconParameters(int chrom, int pos, String allele)
 	{
-		Map<String, String> parameters = new HashMap<String, String>();
+		Map<String, String> parameters = new HashMap<String, String>(3);
 		parameters.put("chrom", String.valueOf(chrom));
 		parameters.put("pos", String.valueOf(pos));
 		parameters.put("allele", String.valueOf(allele));
@@ -333,40 +338,45 @@ public class AppChains
 
 	/**
 	 * Retrieves raw report data from the API server
-	 * @param rawResultList RawReportJobResult list
+	 * @param batchJobData
 	 * @return report
 	 */
-	protected List<RawReportJobResult> getRawReportImpl(List<RawReportJobResult> rawResultList)
+	protected Map<String, RawReportJobResult> getBatchRawReportImpl(List<Map<String, Object>> batchJobData)
 	{
+		Map<String, RawReportJobResult> result = new HashMap<String, RawReportJobResult>(batchJobData.size());
+		List<Integer> jobIdsPending = new ArrayList<Integer>(batchJobData.size());
+		List<String> chainIdsPending = new ArrayList<String>(batchJobData.size());
+
 		while (true)
 		{
 			try
 			{
-				List<Integer> noneCompletedJobs = new ArrayList<Integer>();
-
-				for(RawReportJobResult rawResult : rawResultList) {
-					if (!rawResult.isCompleted()) {
-						noneCompletedJobs.add(rawResult.getJobId());
+				for(Map<String, Object> batchJobDataItem : batchJobData) {
+					RawReportJobResult job = getRawJobResult((Map<String, Object>) batchJobDataItem.get("Value"));
+					String chainId = (String) batchJobDataItem.get("Key");
+					if (job.isCompleted()) {
+						result.put(chainId, job);
+					} else {
+						jobIdsPending.add(job.getJobId());
+						chainIdsPending.add(chainId);
 					}
 				}
 
-				if(noneCompletedJobs.size() == 0){
-					return rawResultList;
+				if(jobIdsPending.size() > 0){
+					batchJobData = getBatchJobResponse(jobIdsPending);
+				} else {
+					return result;
 				}
 
+				jobIdsPending.clear();
 				TimeUnit.SECONDS.sleep(DEFAULT_REPORT_RETRY_TIMEOUT);
-
-				List<RawReportJobResult> updatedResList= getRawJobResultBatchList(noneCompletedJobs);
-				for(RawReportJobResult updatedRes : updatedResList){
-					if (updatedRes.isCompleted())
-						for(RawReportJobResult rawResult : rawResultList)
-							if(rawResult.getJobId().equals(updatedRes.getJobId()))
-								rawResultList.set(rawResultList.indexOf(rawResult), updatedRes);
-				}
 			}
 			catch (Exception e)
 			{
-				throw new RuntimeException("Error processing jobs" , e);
+				throw new RuntimeException(
+						String.format("Error processing jobs: %s, chainIds %s",
+								jobIdsPending.toString(), chainIdsPending.toString()),
+						e);
 			}
 		}
 	}
@@ -423,8 +433,7 @@ public class AppChains
 	 */
 	protected RawReportJobResult getRawJobResult(int jobId)
 	{
-		URL url = getJobResultsUrl(jobId);
-		HttpResponse httpResponse = httpRequest("GET", url, "");
+		HttpResponse httpResponse = httpRequest("GET", getJobResultsUrl(jobId), null);
 		Map<String, Object> decodedResponse = (Map<String, Object>) fromJson(httpResponse.responseData);
 
 		return getRawJobResult(decodedResponse);
@@ -432,34 +441,17 @@ public class AppChains
 
 	/**
 	 * Retrieves raw job results data
-	 * @param noneCompletedJobs job id
+	 * @param jobIdsPending job id
 	 * @return raw job results
 	 */
-	private List<RawReportJobResult> getRawJobResultBatchList(List<Integer> noneCompletedJobs) {
-		Map<String, List<Integer>> request = new HashMap<String, List<Integer>>();
-		request.put("JobIds", noneCompletedJobs);
-		String requestBody = toJson(request);
-		HttpResponse httpResponse = httpRequest("POST", getJobSubmissionUrl("GetAppResultsBatch"), requestBody);
+	private List<Map<String, Object>> getBatchJobResponse(List<Integer> jobIdsPending) {
+		Map<String, List<Integer>> request = new HashMap<String, List<Integer>>(jobIdsPending.size());
+		request.put("JobIds", jobIdsPending);
+		HttpResponse httpResponse = httpRequest("POST", getJobSubmissionUrl("GetAppResultsBatch"), toJson(request));
 		List<Map<String, Object>> decodedResponse = (List<Map<String, Object>>) fromJson(httpResponse.responseData);
-		List<RawReportJobResult> rawReportList = new ArrayList<RawReportJobResult>();
-		for(Map<String, Object> response : decodedResponse){
-			rawReportList.add(getRawJobResult(response));
-		}
-		return  rawReportList;
+		return  decodedResponse;
 	}
 
-	/**
-	 * Retrieves raw job results data
-	 * @param decodedResponse decoded response
-	 * @return list raw job results
-	 */
-	protected List<RawReportJobResult> getRawJobResultBatch(List<Map<String, Object>> decodedResponse) {
-		List<RawReportJobResult> rawReportList = new ArrayList<RawReportJobResult>();
-		for(Map<String, Object> response : decodedResponse){
-			rawReportList.add(getRawJobResult((Map<String, Object>)response.get("Value")));
-		}
-		return rawReportList;
-	}
 	/**
 	 * Retrieves raw job results data
 	 * @param decodedResponse decoded response
@@ -498,42 +490,33 @@ public class AppChains
 	
 	/**
 	 * Submits job to the API server
-	 * @param httpMethod HTTP method to access API server
 	 * @param remoteMethodName REST endpoint name (i.e. StartApp)
 	 * @param applicationMethodName report/application specific identifier (i.e. MelanomaDsAppv)
 	 * @param datasourceId resource with data to use for report generation
 	 * @return job identifier
 	 */
-	protected Job submitReportJob(String httpMethod, String remoteMethodName, String applicationMethodName, String datasourceId)
+	protected Map<String, Object> submitReportJob(String remoteMethodName, String applicationMethodName, String datasourceId)
 	{
-		return submitReportJob(httpMethod, remoteMethodName, toJson(buildReportRequestBody(applicationMethodName, datasourceId)));
+		return  (Map<String, Object>) submitReportJob(remoteMethodName, toJson(buildReportRequestBody(applicationMethodName, datasourceId)));
 	}
 
 	/**
 	 * Submits job to the API server
-	 * @param httpMethod httpMethod HTTP method to access API server
 	 * @param remoteMethodName REST endpoint name (i.e. StartApp)
 	 * @param requestBody jsonified request body to send to server
 	 * @return
 	 */
-	protected Job submitReportJob(String httpMethod, String remoteMethodName, String requestBody)
+	protected Object submitReportJob(String remoteMethodName, String requestBody)
 	{
-		HttpResponse httpResponse = httpRequest(httpMethod, getJobSubmissionUrl(remoteMethodName), requestBody);
+		HttpResponse httpResponse = httpRequest("POST", getJobSubmissionUrl(remoteMethodName), requestBody);
 		
 		if (httpResponse.getResponseCode() != 200)
 			throw new RuntimeException(String.format("Appchains returned error HTTP code %d with message %s",
 					httpResponse.getResponseCode(), httpResponse.getResponseData()));
 		
-		Map<String, Object> parsedResponse = (Map<String, Object>) fromJson(httpResponse.getResponseData());
-		Integer jobId = null;
+		Object parsedResponse = fromJson(httpResponse.getResponseData());
 		
-		try {
-			jobId = Float.valueOf(parsedResponse.get("jobId").toString()).intValue();
-		} catch (Exception e) {
-			throw new RuntimeException("Appchains returned invalid job identifier");
-		}
-		
-		return new Job(jobId);
+		return parsedResponse;
 	}
 
 	
