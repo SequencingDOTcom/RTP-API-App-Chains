@@ -154,6 +154,7 @@ Method  | Purpose | Arguments | Description
 `public AppChains(string token, string chainsUrl, string beaconsUrl)`  | Constructor | **token** - security token provided by sequencing.com <br> **chainsUrl** - API server hostname. api.sequencing.com by default <br> **beaconsUrl** - beacons API server hostname. https://beacon.sequencing.com by default | Constructor used for creating AppChains class instance in case reporting API is needed and where security token is required
 `public Report GetReport(string applicationMethodName, string datasourceId)`  | Reporting API | **applicationMethodName** - name of data processing routine <br> **datasourceId** - input data identifier <br>
 `public Report GetReportBatch(Dictionary<string, string> appChainsParams)`  | Reporting API | **appChainsParams** - map of chain and file identifiers <br>
+`public Dictionary<string, Report> GetReportBatch(Dictionary<string, string> appChainsParams)`  | Reporting API | **Dictionary<string, string> appChainsParams** - app chains request parameters <br> 
 
 Prerequisites:
 * Add Newtonsoft.Json and RestSharp nuget packages into your project
@@ -188,6 +189,15 @@ foreach (Result r in result.getResults())
         v.saveTo("<your token>", ".\\");
     }
 }
+
+// retrieving multiple chain results
+var appChainsParms = new Dictionary<string, string>();
+appChainsParms["Chain9"] = "227680";
+appChainsParms["Chain88"] = "227680";
+
+var jobReports = chains.GetReportBatch(appChainsParms);
+PrintReport("<your token goes here>", jobReports["Chain9"]);
+PrintReport("<your token goes here>", jobReports["Chain88"]);
 ```
 
 ## PHP
