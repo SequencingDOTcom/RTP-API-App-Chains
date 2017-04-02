@@ -231,11 +231,12 @@ class AppChains
         while(1) {
             foreach ($batchJobData as $batchJobDataItem) {
                 $job = $this->getRawJobResult($batchJobDataItem["Value"]);
+                $chainId = $batchJobDataItem["Key"];
 
                 if ($job->isCompleted()) {
                     $result[$batchJobDataItem["Key"]] = $job;
                 } else {
-                    $jobIdsPending[] = $job->getJobId();
+                    $jobIdsPending[$job->getJobId()] = $chainId;
                 }
             }
 
@@ -275,13 +276,6 @@ class AppChains
 				case "plaintext":
 					$results[] = new Result($resultPropName, new TextResultValue($resultPropValue));
 				break;
-				case "pdf":
-					$filename = sprintf("report_%d.%s", $rawResult->getJobId(), $resultPropType);
-					$reportFileUrl = $this->getReportFileUrl($resultPropValue);
-					
-					$resultValue = new FileResultValue($this, $filename, $resultPropType, $reportFileUrl);
-					$results[] = new Result($resultPropName, $resultValue);
-				break;
 			}
 		}
 		
@@ -301,10 +295,18 @@ class AppChains
 
     protected function getBatchJobResponse($jobs) {
         $url = $this->getBatchJobResultsUrl();
-        $requestData = ["JobIds" => $jobs];
+        $requestData = ["JobIds" => array_keys($jobs)];
 
         $httpResponse = $this->httpRequest("POST", $url, json_encode($requestData));
-        return json_decode($httpResponse->getResponseData(), true);
+        $decodedResponse =json_decode($httpResponse->getResponseData(), true);
+        $result = [];
+        foreach ($decodedResponse as $job) {
+        	$jobData = [];
+        	$jobData["Key"] = $jobs[$job["Status"]["IdJob"]];
+        	$jobData["Value"] = $job;
+        	$result[] = $jobData;
+		}
+        return $result;
     }
 	/**
 	 * Retrieves raw job results data
@@ -329,7 +331,7 @@ class AppChains
 		$result->setSource($decodedResponse);
 		$result->setJobId($job_id);
 		$result->setSucceeded($succeeded);
-		$result->setCompleted(!strcasecmp($jobStatus, "completed") || !strcasecmp($jobStatus, "failed"));
+		$result->setCompleted(!strcasecmp($jobStatus, "completed") || !strcasecmp($jobStatus, "cancelled"));
 		$result->setResultProps($resultProps);
 		$result->setStatus($jobStatus);
 		

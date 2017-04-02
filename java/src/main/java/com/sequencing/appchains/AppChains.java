@@ -14,6 +14,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
+import com.sun.deploy.util.StringUtils;
 
 public class AppChains
 {
@@ -344,8 +345,7 @@ public class AppChains
 	protected Map<String, RawReportJobResult> getBatchRawReportImpl(List<Map<String, Object>> batchJobData)
 	{
 		Map<String, RawReportJobResult> result = new HashMap<String, RawReportJobResult>(batchJobData.size());
-		List<Integer> jobIdsPending = new ArrayList<Integer>(batchJobData.size());
-		List<String> chainIdsPending = new ArrayList<String>(batchJobData.size());
+		Map<Integer, String> jobIdsPending = new HashMap<Integer, String>(batchJobData.size());
 
 		while (true)
 		{
@@ -357,25 +357,25 @@ public class AppChains
 					if (job.isCompleted()) {
 						result.put(chainId, job);
 					} else {
-						jobIdsPending.add(job.getJobId());
-						chainIdsPending.add(chainId);
+						jobIdsPending.put(job.getJobId(), chainId);
 					}
 				}
 
 				if(jobIdsPending.size() > 0){
 					batchJobData = getBatchJobResponse(jobIdsPending);
+					jobIdsPending.clear();
 				} else {
 					return result;
 				}
 
-				jobIdsPending.clear();
+
 				TimeUnit.SECONDS.sleep(DEFAULT_REPORT_RETRY_TIMEOUT);
 			}
 			catch (Exception e)
 			{
 				throw new RuntimeException(
-						String.format("Error processing jobs: %s, chainIds %s",
-								jobIdsPending.toString(), chainIdsPending.toString()),
+						String.format("Error processing jobs: %s",
+								StringUtils.join(jobIdsPending.keySet(), " ")),
 						e);
 			}
 		}
@@ -408,14 +408,6 @@ public class AppChains
 			if (resultPropType.equals("plaintext"))
 			{
 					results.add(new Result(resultPropName, new TextResultValue(resultPropValue)));
-			} 
-			else if (resultPropType.equals("pdf"))
-			{
-					String filename = String.format("report_%d.%s", rawResult.getJobId(), resultPropType);
-					URL reportFileUrl = getReportFileUrl(Integer.valueOf(resultPropValue));
-					
-					ResultValue resultValue = new FileResultValue(filename, resultPropType, reportFileUrl);
-					results.add(new Result(resultPropName, resultValue));
 			}
 		}
 		
@@ -444,12 +436,19 @@ public class AppChains
 	 * @param jobIdsPending job id
 	 * @return raw job results
 	 */
-	private List<Map<String, Object>> getBatchJobResponse(List<Integer> jobIdsPending) {
-		Map<String, List<Integer>> request = new HashMap<String, List<Integer>>(jobIdsPending.size());
-		request.put("JobIds", jobIdsPending);
+	private List<Map<String, Object>> getBatchJobResponse(Map<Integer, String> jobIdsPending) {
+		Map<String, Set<Integer>> request = new HashMap<String, Set<Integer>>(jobIdsPending.size());
+		request.put("JobIds", jobIdsPending.keySet());
 		HttpResponse httpResponse = httpRequest("POST", getJobSubmissionUrl("GetAppResultsBatch"), toJson(request));
 		List<Map<String, Object>> decodedResponse = (List<Map<String, Object>>) fromJson(httpResponse.responseData);
-		return  decodedResponse;
+		List<Map<String, Object>> result = new ArrayList<Map<String, Object>>(jobIdsPending.size());
+		for(Map<String, Object> job : decodedResponse){
+			Map<String, Object> jobData = new HashMap<String, Object>(2);
+			jobData.put("Key", jobIdsPending.get(Float.valueOf(((Map<String, Object>)job.get("Status")).get("IdJob").toString()).intValue()));
+			jobData.put("Value", job);
+			result.add(jobData);
+		}
+		return  result;
 	}
 
 	/**
@@ -481,7 +480,7 @@ public class AppChains
 		result.setSource(decodedResponse);
 		result.setJobId(jobId);
 		result.setSucceeded(succeeded);
-		result.setCompleted(jobStatus.equalsIgnoreCase("completed") || jobStatus.equalsIgnoreCase("failed"));
+		result.setCompleted(jobStatus.equalsIgnoreCase("completed") || jobStatus.equalsIgnoreCase("cancelled"));
 		result.setResultProps(resultProps);
 		result.setStatus(jobStatus);
 		
@@ -761,7 +760,7 @@ public class AppChains
 		FILE, TEXT
 	}
 	
-	class ResultValue
+	public class ResultValue
 	{
 		private ResultType type;
 		
@@ -779,7 +778,7 @@ public class AppChains
 	/**
 	 * Class that represents result entity if plain text string
 	 */
-	class TextResultValue extends ResultValue
+	public class TextResultValue extends ResultValue
 	{
 		private String data;
 
@@ -798,7 +797,7 @@ public class AppChains
 	/**
 	 * Class that represents result entity if it's file
 	 */
-	class FileResultValue extends ResultValue
+	public class FileResultValue extends ResultValue
 	{
 		private String name;
 		private String extension;
@@ -855,7 +854,7 @@ public class AppChains
 	/**
 	 * Class that represents single report result entity
 	 */
-	class Result
+	public class Result
 	{
 		private ResultValue value;
 		private String name;
