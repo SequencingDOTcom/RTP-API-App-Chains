@@ -61,6 +61,7 @@ sub getBatchReport
 	my ($self, $remoteMethodName, $chainSpec) = @_;
 	
 	my $requestBody = JSON::encode_json($self->buildBatchReportRequestBody($remoteMethodName, $chainSpec));
+	print $requestBody;
 	my $batchJobData = $self->submitReportJobImpl("POST", $remoteMethodName, $requestBody);
 	
 	return $self->getBatchReportImpl($batchJobData);
@@ -257,18 +258,18 @@ sub getBatchRawReportImpl
 			my $job = $self->getRawJobResult($_ ->{Value});
 			
 			if ($job->isCompleted()) {
-				$jobIdsCompleted{$job->getJobId()} = 1;
+				$jobIdsCompleted{$job->getJobId()} = $_ ->{Key};
 				$result{$_ ->{Key}} = $job;
 			} else {
-				$jobIdsPending{$job->getJobId()} = 1;
+				$jobIdsPending{$job->getJobId()} = $_ ->{Key};
 			}
 		}
 		
-		my @pendingJobs = keys %jobIdsPending;
-		my @completedJobs = keys %jobIdsCompleted;
+		#my @pendingJobs = keys %jobIdsPending;
+		#my @completedJobs = keys %jobIdsCompleted;
 		
-		if (scalar @pendingJobs > 0) {
-			$batchJobData = $self->getBatchJobResponse(\@pendingJobs);
+		if (scalar (keys %jobIdsPending) > 0) {
+			$batchJobData = $self->getBatchJobResponse(\%jobIdsPending);
 		} else {
 			return \%result;
 		}
@@ -290,13 +291,25 @@ sub getJobResponse
 sub getBatchJobResponse
 {
 	my ($self, $jobs) = @_;
-	
+
+	my @jobIds = keys %$jobs;	
 	my $url = $self->getBatchJobResultsUrl();
-	my %requestData = ("JobIds" => $jobs);
+	my %requestData = ("JobIds" => \@jobIds);
 	
 	my $httpResponse = $self->httpRequest("POST", $url, JSON::encode_json(\%requestData));
+	my $decodedResponse = (JSON::decode_json($httpResponse->getResponseData()));
+
+	my @result = ();
+	foreach my $k (@$decodedResponse)
+	{
+		my %h = ();
+		my $jobId = $k->{Status}->{IdJob};
+		$h{Key} = $jobs->{$jobId};
+		$h{Value} = $k;
+		push(@result, \%h);
+	}
 	
-	return JSON::decode_json($httpResponse->getResponseData());
+	return \@result;
 }
 
 
@@ -322,7 +335,7 @@ sub getRawJobResult
 	$result->setSource($decodedResponse);
 	$result->setJobId($decodedResponse->{Status}->{IdJob});
 	$result->setSucceeded($succeeded);
-	$result->setCompleted(lc($jobStatus) eq "completed" || lc($jobStatus) eq "failed");
+	$result->setCompleted(lc($jobStatus) eq "completed" || lc($jobStatus) eq "cancelled");
 	$result->setResultProps($decodedResponse->{ResultProps});
 	$result->setStatus($jobStatus);
 	
