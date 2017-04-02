@@ -168,10 +168,10 @@ namespace Sequencing.AppChainsSample
                     var appChainsRes = backendFacade.GetAppResultsBatch(new { JobIds = noneCompletedJobs });
                     foreach (var chainRes in appResult.ToList())
                     {
-                        var updateResult = appChainsRes.Select(r => r).Where(i => i.Value.Status.IdJob == chainRes.Value.Status.IdJob).FirstOrDefault();
+                        var updateResult = appChainsRes.Select(r => r).Where(i => i.Status.IdJob == chainRes.Value.Status.IdJob).FirstOrDefault();
                         if (!updateResult.Equals(default(KeyValuePair<string, AppResultsHolder>)))
                         {
-                            var updatedEntry = new KeyValuePair<string, AppResultsHolder>(chainRes.Key, updateResult.Value);
+                            var updatedEntry = new KeyValuePair<string, AppResultsHolder>(chainRes.Key, updateResult);
                             appResult[chainRes.Key] = updatedEntry.Value;
                         }
                     }
@@ -401,7 +401,7 @@ namespace Sequencing.AppChainsSample
             return ExecuteRq<AppResultsHolder>(_restRequest);
         }
 
-        public Dictionary<string, AppResultsHolder> GetAppResultsBatch(dynamic idJob)
+        public List<AppResultsHolder> GetAppResultsBatch(dynamic idJob)
         {
             var _restRequest = CreateRq("GetAppResultsBatch", Method.POST);
             _restRequest.AddParameter(new Parameter
@@ -410,7 +410,7 @@ namespace Sequencing.AppChainsSample
                 Value = JsonConvert.SerializeObject(idJob),
                 Type = ParameterType.RequestBody
             });
-            return ExecuteRqExtended(_restRequest);
+            return ExecuteRq<List<AppResultsHolder>>(_restRequest);
         }
 
         /// <summary>
