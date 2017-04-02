@@ -310,23 +310,24 @@ class AppChains(object):
         :return: report
         """
         result = {}
-        jobIdsPending = []
+        jobIdsPending = {}
+
 
         while True:
             for batchJobDataItem in batchJobData:
                 job = self.getRawJobResult(batchJobDataItem.get('Value'))
-
+                chainId = batchJobDataItem.get('Key')
                 if job.isCompleted():
-                    result[batchJobDataItem.get('Key')] = job
+                    result[chainId] = job
                 else:
-                    jobIdsPending.append(job.getJobId())
+                    jobIdsPending[job.getJobId()] = chainId
 
             if len(jobIdsPending) > 0 :
                 batchJobData = self.getBatchJobResponse(jobIdsPending)
             else:
                 return result
 
-            jobIdsPending = []
+            jobIdsPending = {}
             time.sleep(self.DEFAULT_REPORT_RETRY_TIMEOUT)
 
 
@@ -344,14 +345,6 @@ class AppChains(object):
                 results.append(
                     Result(
                         result_prop_name, TextResultValue(result_prop_value)))
-            elif result_prop_type == 'pdf':
-                filename = 'report_{}.{}'.format(
-                    raw_result.getJobId(), result_prop_type)
-                report_file_url = self.getReportFileUrl(result_prop_value)
-
-                result_value = FileResultValue(
-                    self, filename, result_prop_type, report_file_url)
-                results.append(Result(result_prop_name, result_value))
 
         final_result = Report()
         final_result.setSucceeded(raw_result.isSucceeded())
@@ -409,12 +402,20 @@ class AppChains(object):
         :param job: job identifier
         :return: job responce
         """
+
         url = self.getBatchJobResultsUrl()
-        requestData = {"JobIds":jobs}
+        requestData = {"JobIds":list(jobs.keys())}
 
         httpResponse = self.httpRequest(url, json.dumps(requestData))
+        decodedResponse = json.loads(httpResponse.getResponseData())
+        result = [];
+        for job in decodedResponse:
+            jobData = {}
+            jobData["Key"] = jobs[job["Status"]["IdJob"]]
+            jobData["Value"] = job
+            result.append(jobData)
 
-        return json.loads(httpResponse.getResponseData())
+        return result
 
     def submitReportJobImpl(self, remote_method_name, request_body):
         """Submits job to the API server
@@ -451,7 +452,7 @@ class AppChains(object):
         result.setJobId(job_id)
         result.setSucceeded(succeeded)
         result.setCompleted(
-            job_status.lower() == 'completed' or job_status.lower() == 'failed')
+            job_status.lower() == 'completed' or job_status.lower() == 'cancelled')
         result.setResultProps(result_props)
         result.setStatus(job_status)
         return result
