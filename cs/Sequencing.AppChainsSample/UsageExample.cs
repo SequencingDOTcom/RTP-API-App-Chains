@@ -11,7 +11,7 @@ namespace Sequencing.AppChainsSample
         private static void Main(string[] args)
 
         {          
-            var chains = new AppChains("<your token goes here>", "https://api.sequencing.com/v2",
+            var chains = new AppChains("<your token goes here>", "https://api.sequencing.com/",
                 "https://beacon.sequencing.com/");
 
             //Low level method invocation example 

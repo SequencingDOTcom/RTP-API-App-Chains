@@ -20,6 +20,8 @@ namespace Sequencing.AppChainsSample
     /// </summary>
     public class AppChains
     {
+        private const string API_VERSION = "/v2/";
+
         /// <summary>
         /// Security token supplied by the client
         /// </summary>
@@ -48,7 +50,7 @@ namespace Sequencing.AppChainsSample
         /// <param name="beaconsUrl"></param>
         public AppChains(string token, string chainsUrl, string beaconsUrl) : this(beaconsUrl)
         {
-            backendFacade = new BackendServiceFacade(token, chainsUrl);
+            backendFacade = new BackendServiceFacade(token, chainsUrl + API_VERSION);
         }
 
         /// <summary>
@@ -157,9 +159,13 @@ namespace Sequencing.AppChainsSample
                     List<long> noneCompletedJobs = new List<long>();
 
                     foreach (var result in appResult)
+                    {
+                        if (result.Value.Status.Status == "Cancelled")
+                            throw new ApplicationException("Error processing jobs");
                         if (result.Value.Status.Status != "Completed")
                             noneCompletedJobs.Add(result.Value.Status.IdJob);
-
+                    }
+                        
                     if (noneCompletedJobs.Count == 0)
                         return appResult;
 
@@ -178,7 +184,7 @@ namespace Sequencing.AppChainsSample
                 }
                 catch (Exception e)
                 {
-                    throw new ApplicationException("Error processing jobs", e);
+                    throw new ApplicationException(e.Message);
                 }
             }
         }
