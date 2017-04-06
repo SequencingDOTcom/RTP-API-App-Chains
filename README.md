@@ -165,9 +165,9 @@ Adding code to the project:
 After that you can start utilizing Reporting API:
 
 ```csharp
-var chains = new AppChains("<your token>", "https://api.sequencing.com/v1", "https://beacon.sequencing.com/");
+var chains = new AppChains("<your token>", "https://api.sequencing.com/", "https://beacon.sequencing.com/");
 
-Report result = chains.GetReport("Chain9", "FILE:80599");
+Report result = chains.GetReport("Chain9", "80599");
 if (result.Succeeded == false)
     Console.WriteLine("Request has failed");
 else
